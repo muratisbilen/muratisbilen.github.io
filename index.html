@@ -1,41 +1,292 @@
 <!DOCTYPE html>
-<html>
-    <head>
-        <title>
-            My Google Search
-        </title>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exponential Sum Plotter</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            margin: 2rem;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin: 1.5rem 0;
+        }
+        #text-input {
+            flex-grow: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #plot-container {
+            margin-top: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 400px;
+        }
+        #plot-canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        .status-bar {
+            margin-top: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 24px;
+        }
+        #status-label {
+            color: #555;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
 
-        <link rel="stylesheet" href="style-index.css">
-    </head>
-    <body style="margin:0;height:100vh;">
-        <div style="margin:0px;height:30px">
-            <nav id="navigationpane">
-                <ul style="display: flex;flex-direction:row;justify-content:right;">
-                    <li><a href="imagesearch.html">Images</a></li>
-                    <li><a href="advancedsearch.html">Advanced Search</a></li>
-                </ul> 
-            </nav>
+    <div class="container">
+        <h1>Exponential Sum Plotter</h1>
+        <p>Enter any string to generate a unique plot based on its cryptographic hash.</p>
+
+        <div class="input-group">
+            <input type="text" id="text-input" placeholder="e.g., İstanbul, Türkiye, Hello World">
+            <button id="generate-button">Generate Plot</button>
         </div>
-        <div style="display: flex;align-items:center;flex-direction:column;margin:0;height:calc(100vh - 30px);overflow:hidden;justify-content:center;">
-            <div class=main style="text-align:center">
-                <img src="Google_2015_logo.png" alt="Google Logo 2015" width="300px">
-            </div>
-            <div style="display: flex;align-items:center;flex-direction:row;">
-                <form action="https://www.google.com/search">
-                    <div id="SearchTextBoxDiv">
-                        <!-- I copied the following svg tags from Google's source HTML file -->
-                        <svg focusable="false" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" style="width:20px"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
-                        <input id="SearchTextBox" type="text" placeholder="" name="q" autofocus>
-                        <svg class="goxjub" focusable="false" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width:23px;margin-right:15px;"><path fill="#4285f4" d="m12 15c1.66 0 3-1.31 3-2.97v-7.02c0-1.66-1.34-3.01-3-3.01s-3 1.34-3 3.01v7.02c0 1.66 1.34 2.97 3 2.97z"></path><path fill="#34a853" d="m11 18.08h2v3.92h-2z"></path><path fill="#fbbc04" d="m7.05 16.87c-1.27-1.33-2.05-2.83-2.05-4.87h2c0 1.45 0.56 2.42 1.47 3.38v0.32l-1.15 1.18z"></path><path fill="#ea4335" d="m12 16.93a4.97 5.25 0 0 1 -3.54 -1.55l-1.41 1.49c1.26 1.34 3.02 2.13 4.95 2.13 3.87 0 6.99-2.92 6.99-7h-1.99c0 2.92-2.24 4.93-5 4.93z"></path></svg>
-                        <svg class="Gdd5U" focusable="false" viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg" style="width:23px;margin-right:20px;"><rect fill="none" height="192" width="192"></rect><g><circle fill="#34a853" cx="144.07" cy="144" r="16"></circle><circle fill="#4285f4" cx="96.07" cy="104" r="24"></circle><path fill="#ea4335" d="M24,135.2c0,18.11,14.69,32.8,32.8,32.8H96v-16l-40.1-0.1c-8.8,0-15.9-8.19-15.9-17.9v-18H24V135.2z"></path><path fill="#fbbc04" d="M168,72.8c0-18.11-14.69-32.8-32.8-32.8H116l20,16c8.8,0,16,8.29,16,18v30h16V72.8z"></path><path fill="#4285f4" d="M112,24l-32,0L68,40H56.8C38.69,40,24,54.69,24,72.8V92h16V74c0-9.71,7.2-18,16-18h80L112,24z"></path></g></svg>
-                    </div>
-                    <div>
-                        <button type="submit">Google Search</button>
-                        <button type="submit" name="btnI">I'm Feeling Lucky</button>
-                    </div>
-                </form>
-            </div>
+
+        <div id="plot-container">
+            <canvas id="plot-canvas" width="600" height="600"></canvas>
         </div>
-    </body>
+
+        <div class="status-bar">
+            <span id="status-label">Status: Ready</span>
+            <button id="download-button" disabled>Download Image</button>
+        </div>
+    </div>
+
+    <script>
+        // --- Get references to HTML elements ---
+        const textInput = document.getElementById('text-input');
+        const generateButton = document.getElementById('generate-button');
+        const downloadButton = document.getElementById('download-button');
+        const statusLabel = document.getElementById('status-label');
+        const canvas = document.getElementById('plot-canvas');
+        const ctx = canvas.getContext('2d');
+
+        // --- Core Mathematical Logic in JavaScript ---
+
+        function gcd(a, b) {
+            return b === 0 ? a : gcd(b, a % b);
+        }
+
+        function lcm(a, b) {
+            if (a === 0 || b === 0) return 0;
+            return Math.abs(a * b) / gcd(a, b);
+        }
+
+        /**
+         * Generates a date from a string using SHA-256 hash. (Async function)
+         */
+        async function stringToDate(inputString) {
+            if (!inputString) return null;
+
+            // 1. Encode string to bytes
+            const encoder = new TextEncoder();
+            const data = encoder.encode(inputString.toUpperCase());
+            
+            // 2. Compute SHA-256 hash using the browser's built-in crypto API
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            
+            // 3. Convert the hash buffer to a hexadecimal string
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+            // 4. Derive date components from the end of the hash string
+            const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
+            const y = yearPart + 1970;
+
+            const monthPart = parseInt(hexDigest.slice(-6, -4), 16);
+            const m = (monthPart % 12) + 1;
+
+            const dayPart = parseInt(hexDigest.slice(-8, -6), 16);
+            const d = (dayPart % 28) + 1;
+
+            return { m, d, y };
+        }
+
+        /**
+         * Calculates the exponential sum and returns an array of points.
+         */
+        function calculateExponentialSum(m, d, y) {
+            const lcm_md = lcm(m, d);
+            const lcm_mdy = lcm(lcm_md, y);
+            const N = 2 * lcm_mdy + 1;
+
+            if (N > 15000000) { // Safety limit to prevent browser from freezing
+                throw new Error(`Calculation aborted: N is too large (${N.toLocaleString()}). The date combination is too complex.`);
+            }
+
+            const zPoints = [];
+            let currentZ = { re: 0, im: 0 }; // Represents a complex number
+
+            for (let n = 0; n <= N; n++) {
+                const f = n / m + (n ** 2) / d + (n ** 3) / y;
+                const theta = 2 * Math.PI * f;
+
+                // Euler's formula: e^(i*theta) = cos(theta) + i*sin(theta)
+                const expPoint = { re: Math.cos(theta), im: Math.sin(theta) };
+
+                // Cumulatively sum the points
+                currentZ.re += expPoint.re;
+                currentZ.im += expPoint.im;
+
+                zPoints.push({ re: currentZ.re, im: currentZ.im });
+            }
+            return zPoints;
+        }
+
+        /**
+         * Renders the points on the HTML canvas.
+         */
+        function drawPlot(points) {
+            // 1. Find the data boundaries to scale the plot correctly
+            let minRe = Infinity, maxRe = -Infinity, minIm = Infinity, maxIm = -Infinity;
+            for (const p of points) {
+                if (p.re < minRe) minRe = p.re;
+                if (p.re > maxRe) maxRe = p.re;
+                if (p.im < minIm) minIm = p.im;
+                if (p.im > maxIm) maxIm = p.im;
+            }
+
+            // 2. Determine scale and offset to center the plot and maintain aspect ratio
+            const dataWidth = maxRe - minRe;
+            const dataHeight = maxIm - minIm;
+            
+            const scale = Math.min(canvas.width / dataWidth, canvas.height / dataHeight) * 0.9; // 90% padding
+            
+            const offsetX = (canvas.width - dataWidth * scale) / 2 - minRe * scale;
+            const offsetY = (canvas.height + dataHeight * scale) / 2 + minIm * scale;
+
+            // 3. Clear and draw the plot
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#003366';
+
+            for (let i = 0; i < points.length; i++) {
+                const p = points[i];
+                const canvasX = p.re * scale + offsetX;
+                const canvasY = canvas.height - (p.im * scale + offsetY - dataHeight*scale); // Flip Y-axis
+
+                if (i === 0) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
+            }
+            ctx.stroke();
+        }
+
+        // --- Main Application Logic & Event Handlers ---
+
+        async function handleGenerateClick() {
+            const inputStr = textInput.value;
+            if (!inputStr) {
+                statusLabel.textContent = 'Status: Please enter a string.';
+                return;
+            }
+
+            // Disable UI elements and show processing status
+            generateButton.disabled = true;
+            downloadButton.disabled = true;
+            statusLabel.textContent = `Status: Hashing "${inputStr}"...`;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous plot
+            
+            try {
+                // Use requestAnimationFrame to allow UI to update before heavy work
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                const date = await stringToDate(inputStr);
+                statusLabel.textContent = `Status: Date is M=${date.m}, D=${date.d}, Y=${date.y}. Calculating sum...`;
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                const points = calculateExponentialSum(date.m, date.d, date.y);
+                statusLabel.textContent = `Status: Plotting ${points.length.toLocaleString()} points...`;
+                await new Promise(resolve => requestAnimationFrame(resolve));
+
+                drawPlot(points);
+                statusLabel.textContent = `Status: Plot generated for date ${date.d.toString().padStart(2, '0')}-${date.m.toString().padStart(2, '0')}-${date.y}`;
+                downloadButton.disabled = false;
+
+            } catch (error) {
+                statusLabel.textContent = `Status: Error! ${error.message}`;
+                alert(`An error occurred: ${error.message}`);
+            } finally {
+                generateButton.disabled = false;
+            }
+        }
+
+        function handleDownloadClick() {
+            const link = document.createElement('a');
+            const filename = (textInput.value.replace(/[^a-z0-9]/gi, '_') || 'plot') + '.png';
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // --- Attach Event Listeners ---
+        generateButton.addEventListener('click', handleGenerateClick);
+        downloadButton.addEventListener('click', handleDownloadClick);
+        textInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                handleGenerateClick();
+            }
+        });
+
+    </script>
+</body>
 </html>
-
