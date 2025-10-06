@@ -127,74 +127,51 @@
             if (a === 0 || b === 0) return 0;
             return Math.abs(a * b) / gcd(a, b);
         }
-
-        /**
-         * Generates a date from a string using SHA-256 hash. (Async function)
-         */
+        
         async function stringToDate(inputString) {
             if (!inputString) return null;
-
-            // 1. Encode string to bytes
             const encoder = new TextEncoder();
             const data = encoder.encode(inputString.toUpperCase());
-            
-            // 2. Compute SHA-256 hash using the browser's built-in crypto API
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            
-            // 3. Convert the hash buffer to a hexadecimal string
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-
-            // 4. Derive date components from the end of the hash string
             const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
             const y = yearPart + 1970;
-
             const monthPart = parseInt(hexDigest.slice(-6, -4), 16);
             const m = (monthPart % 12) + 1;
-
             const dayPart = parseInt(hexDigest.slice(-8, -6), 16);
             const d = (dayPart % 28) + 1;
-
             return { m, d, y };
         }
 
-        /**
-         * Calculates the exponential sum and returns an array of points.
-         */
         function calculateExponentialSum(m, d, y) {
             const lcm_md = lcm(m, d);
             const lcm_mdy = lcm(lcm_md, y);
             const N = 2 * lcm_mdy + 1;
 
-            if (N > 15000000) { // Safety limit to prevent browser from freezing
-                throw new Error(`Calculation aborted: N is too large (${N.toLocaleString()}). The date combination is too complex.`);
+            if (N > 15000000) {
+                throw new Error(`Calculation aborted: N is too large (${N.toLocaleString()}).`);
             }
 
             const zPoints = [];
-            let currentZ = { re: 0, im: 0 }; // Represents a complex number
-
+            let currentZ = { re: 0, im: 0 };
             for (let n = 0; n <= N; n++) {
                 const f = n / m + (n ** 2) / d + (n ** 3) / y;
                 const theta = 2 * Math.PI * f;
-
-                // Euler's formula: e^(i*theta) = cos(theta) + i*sin(theta)
-                const expPoint = { re: Math.cos(theta), im: Math.sin(theta) };
-
-                // Cumulatively sum the points
-                currentZ.re += expPoint.re;
-                currentZ.im += expPoint.im;
-
+                currentZ.re += Math.cos(theta);
+                currentZ.im += Math.sin(theta);
                 zPoints.push({ re: currentZ.re, im: currentZ.im });
             }
             return zPoints;
         }
 
-        /**
-         * Renders the points on the HTML canvas.
-         */
+        // --- CORRECTED DRAWING FUNCTION ---
         function drawPlot(points) {
             // 1. Find the data boundaries to scale the plot correctly
-            let minRe = Infinity, maxRe = -Infinity, minIm = Infinity, maxIm = -Infinity;
+            if (points.length === 0) return;
+            let minRe = points[0].re, maxRe = points[0].re;
+            let minIm = points[0].im, maxIm = points[0].im;
+
             for (const p of points) {
                 if (p.re < minRe) minRe = p.re;
                 if (p.re > maxRe) maxRe = p.re;
@@ -202,16 +179,28 @@
                 if (p.im > maxIm) maxIm = p.im;
             }
 
-            // 2. Determine scale and offset to center the plot and maintain aspect ratio
+            // 2. Determine scale to fit the plot within the canvas with a margin
             const dataWidth = maxRe - minRe;
             const dataHeight = maxIm - minIm;
-            
-            const scale = Math.min(canvas.width / dataWidth, canvas.height / dataHeight) * 0.9; // 90% padding
-            
-            const offsetX = (canvas.width - dataWidth * scale) / 2 - minRe * scale;
-            const offsetY = (canvas.height + dataHeight * scale) / 2 + minIm * scale;
 
-            // 3. Clear and draw the plot
+            // Handle edge case of a single point or a straight line
+            if (dataWidth === 0 && dataHeight === 0) {
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 ctx.fillRect(canvas.width/2 -1, canvas.height/2 -1, 2, 2); // Draw a dot
+                 return;
+            }
+
+            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth;
+            const scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
+            const scale = Math.min(scaleX, scaleY) * 0.9; // Use 90% of canvas space
+
+            // 3. Calculate margins to center the plot
+            const scaledPlotWidth = dataWidth * scale;
+            const scaledPlotHeight = dataHeight * scale;
+            const marginX = (canvas.width - scaledPlotWidth) / 2;
+            const marginY = (canvas.height - scaledPlotHeight) / 2;
+
+            // 4. Clear canvas and draw the plot line
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.beginPath();
             ctx.lineWidth = 1;
@@ -219,8 +208,11 @@
 
             for (let i = 0; i < points.length; i++) {
                 const p = points[i];
-                const canvasX = p.re * scale + offsetX;
-                const canvasY = canvas.height - (p.im * scale + offsetY - dataHeight*scale); // Flip Y-axis
+                
+                // Apply the transformation from data coordinates to canvas coordinates
+                const canvasX = ((p.re - minRe) * scale) + marginX;
+                // Invert Y-axis because canvas (0,0) is top-left
+                const canvasY = canvas.height - (((p.im - minIm) * scale) + marginY);
 
                 if (i === 0) {
                     ctx.moveTo(canvasX, canvasY);
@@ -231,8 +223,8 @@
             ctx.stroke();
         }
 
-        // --- Main Application Logic & Event Handlers ---
 
+        // --- Main Application Logic & Event Handlers ---
         async function handleGenerateClick() {
             const inputStr = textInput.value;
             if (!inputStr) {
@@ -240,24 +232,21 @@
                 return;
             }
 
-            // Disable UI elements and show processing status
             generateButton.disabled = true;
             downloadButton.disabled = true;
             statusLabel.textContent = `Status: Hashing "${inputStr}"...`;
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous plot
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
             
             try {
-                // Use requestAnimationFrame to allow UI to update before heavy work
                 await new Promise(resolve => requestAnimationFrame(resolve));
-
                 const date = await stringToDate(inputStr);
-                statusLabel.textContent = `Status: Date is M=${date.m}, D=${date.d}, Y=${date.y}. Calculating sum...`;
+                statusLabel.textContent = `Status: Date is M=${date.m}, D=${date.d}, Y=${date.y}. Calculating...`;
+                
                 await new Promise(resolve => requestAnimationFrame(resolve));
-
                 const points = calculateExponentialSum(date.m, date.d, date.y);
                 statusLabel.textContent = `Status: Plotting ${points.length.toLocaleString()} points...`;
-                await new Promise(resolve => requestAnimationFrame(resolve));
 
+                await new Promise(resolve => requestAnimationFrame(resolve));
                 drawPlot(points);
                 statusLabel.textContent = `Status: Plot generated for date ${date.d.toString().padStart(2, '0')}-${date.m.toString().padStart(2, '0')}-${date.y}`;
                 downloadButton.disabled = false;
@@ -278,7 +267,6 @@
             link.click();
         }
 
-        // --- Attach Event Listeners ---
         generateButton.addEventListener('click', handleGenerateClick);
         downloadButton.addEventListener('click', handleDownloadClick);
         textInput.addEventListener('keydown', (event) => {
@@ -286,7 +274,6 @@
                 handleGenerateClick();
             }
         });
-
     </script>
 </body>
 </html>
