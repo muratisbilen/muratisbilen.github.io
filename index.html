@@ -122,7 +122,7 @@
 
         function lcm(a, b) {
             if (a === 0 || b === 0) return 0;
-            return Number( (BigInt(a) * BigInt(b)) / BigInt(gcd(a, b)) );
+            return Number((BigInt(a) * BigInt(b)) / BigInt(gcd(a, b)));
         }
         
         async function stringToDate(inputString) {
@@ -142,7 +142,6 @@
             return { m, d, y };
         }
 
-        // --- CORRECTED CALCULATION FUNCTION ---
         function calculateExponentialSum(m, d, y) {
             const lcm_md = lcm(m, d);
             const lcm_mdy = lcm(lcm_md, y);
@@ -155,21 +154,17 @@
             const zPoints = [];
             let currentZ = { re: 0, im: 0 };
             
-            // Convert to BigInts once for the loop
             const m_b = BigInt(m);
             const d_b = BigInt(d);
             const y_b = BigInt(y);
 
             for (let n = 0; n <= N; n++) {
                 const n_b = BigInt(n);
-
-                // THE FIX: Use modular arithmetic to keep numbers small and preserve precision.
-                // We calculate the fractional part of each term separately.
-                const term1_frac = Number(n_b % m_b) / m;
-                const term2_frac = Number((n_b * n_b) % d_b) / d; // (n^2 % d) / d
-                const term3_frac = Number((n_b * n_b * n_b) % y_b) / y; // (n^3 % y) / y
                 
-                // The total fractional part of f. We only care about this.
+                const term1_frac = Number(n_b % m_b) / m;
+                const term2_frac = Number((n_b * n_b) % d_b) / d;
+                const term3_frac = Number((n_b * n_b * n_b) % y_b) / y;
+                
                 const f_frac = (term1_frac + term2_frac + term3_frac) % 1.0;
                 
                 const theta = 2 * Math.PI * f_frac;
@@ -181,43 +176,74 @@
         }
 
         function drawPlot(points) {
-            if (points.length === 0) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; };
+            if (points.length === 0) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            
             let minRe = points[0].re, maxRe = points[0].re, minIm = points[0].im, maxIm = points[0].im;
             for (const p of points) {
-                if (p.re < minRe) minRe = p.re; if (p.re > maxRe) maxRe = p.re;
-                if (p.im < minIm) minIm = p.im; if (p.im > maxIm) maxIm = p.im;
+                if (p.re < minRe) minRe = p.re;
+                if (p.re > maxRe) maxRe = p.re;
+                if (p.im < minIm) minIm = p.im;
+                if (p.im > maxIm) maxIm = p.im;
             }
-            const dataWidth = maxRe - minRe, dataHeight = maxIm - minIm;
+
+            const dataWidth = maxRe - minRe;
+            const dataHeight = maxIm - minIm;
+
             if (dataWidth === 0 && dataHeight === 0) {
-                 ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#003366';
-                 ctx.fillRect(canvas.width/2 -1, canvas.height/2 -1, 2, 2); return;
+                 ctx.clearRect(0, 0, canvas.width, canvas.height);
+                 ctx.fillStyle = '#003366';
+                 ctx.fillRect(canvas.width / 2 - 1, canvas.height / 2 - 1, 2, 2);
+                 return;
             }
-            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth, scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
+
+            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth;
+            const scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
             const scale = Math.min(scaleX, scaleY) * 0.9;
-            const marginX = (canvas.width - dataWidth * scale) / 2, marginY = (canvas.height - dataHeight * scale) / 2;
-            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); ctx.lineWidth = 1; ctx.strokeStyle = '#003366';
+            const marginX = (canvas.width - dataWidth * scale) / 2;
+            const marginY = (canvas.height - dataHeight * scale) / 2;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.strokeStyle = '#003366';
+
             for (let i = 0; i < points.length; i++) {
                 const p = points[i];
                 const canvasX = ((p.re - minRe) * scale) + marginX;
                 const canvasY = canvas.height - (((p.im - minIm) * scale) + marginY);
-                if (i === 0) { ctx.moveTo(canvasX, canvasY); } else { ctx.lineTo(canvasX, canvasY); }
+                if (i === 0) {
+                    ctx.moveTo(canvasX, canvasY);
+                } else {
+                    ctx.lineTo(canvasX, canvasY);
+                }
             }
             ctx.stroke();
         }
 
         async function handleGenerateClick() {
             const inputStr = textInput.value;
-            if (!inputStr) { statusLabel.textContent = 'Status: Please enter a string.'; return; }
-            generateButton.disabled = true; downloadButton.disabled = true;
+            if (!inputStr) {
+                statusLabel.textContent = 'Status: Please enter a string.';
+                return;
+            }
+            
+            generateButton.disabled = true;
+            downloadButton.disabled = true;
             statusLabel.textContent = `Status: Hashing "${inputStr}"...`;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+
             try {
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 const date = await stringToDate(inputStr);
                 statusLabel.textContent = `Status: Date is M=${date.m}, D=${date.d}, Y=${date.y}. Calculating...`;
+                
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 const points = calculateExponentialSum(date.m, date.d, date.y);
                 statusLabel.textContent = `Status: Plotting ${points.length.toLocaleString()} points...`;
+                
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 drawPlot(points);
                 statusLabel.textContent = `Status: Plot generated for date ${date.d.toString().padStart(2, '0')}-${date.m.toString().padStart(2, '0')}-${date.y}`;
@@ -241,7 +267,9 @@
         generateButton.addEventListener('click', handleGenerateClick);
         downloadButton.addEventListener('click', handleDownloadClick);
         textInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') { handleGenerateClick(); }
+            if (event.key === 'Enter') {
+                handleGenerateClick();
+            }
         });
     </script>
 </body>
