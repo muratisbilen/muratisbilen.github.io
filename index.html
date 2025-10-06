@@ -91,7 +91,7 @@
 
     <div class="container">
         <h1>Exponential Sum Plotter</h1>
-        <p>Enter any string to generate a unique plot based on its cryptographic hash.</p>
+        <p>Enter any string to generate a unique plot.</p>
 
         <div class="input-group">
             <input type="text" id="text-input" placeholder="e.g., İstanbul, Türkiye, Hello World">
@@ -240,7 +240,7 @@
             try {
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 const date = await stringToDate(inputStr);
-                statusLabel.textContent = `Status: Date is M=${date.m}, D=${date.d}, Y=${date.y}. Calculating...`;
+                statusLabel.textContent = `Status: Calculating...`;
                 
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 const points = calculateExponentialSum(date.m, date.d, date.y);
@@ -248,7 +248,7 @@
 
                 await new Promise(resolve => requestAnimationFrame(resolve));
                 drawPlot(points);
-                statusLabel.textContent = `Status: Plot generated for date ${date.d.toString().padStart(2, '0')}-${date.m.toString().padStart(2, '0')}-${date.y}`;
+                statusLabel.textContent = `Status: Plot generated for "${inputStr}"`;
                 downloadButton.disabled = false;
 
             } catch (error) {
@@ -277,3 +277,4 @@
     </script>
 </body>
 </html>
+
