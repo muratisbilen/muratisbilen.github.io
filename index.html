@@ -91,145 +91,6 @@
 
     <div class="container">
         <h1>Exponential Sum Plotter</h1>
-        <p>Enter any string to generate a unique plot.</p>
-
-        <div class="input-group">
-            <input type="text" id="text-input" placeholder="e.g., İstanbul, Türkiye, Hello World">
-            <button id="generate-button">Generate Plot</button>
-        </div>
-
-        <div id="plot-container">
-            <canvas id="plot-canvas" width="600" height="600"></canvas>
-        </div>
-
-        <div class="status-bar">
-            <span id="status-label">Status: Ready</span>
-            <button id="download-button" disabled>Download Image</button>
-        </div>
-    </div>
-
-    <script>
-        // --- Get references to HTML elements ---
-        const textInput = document.getElementById('text-input');
-        const generateButton = document.getElementById('generate-button');
-        const downloadButton = document.getElementById('download-button');
-        const statusLabel = document.getElementById('status-label');
-        const canvas = document.getElementById('plot-canvas');
-        const ctx = canvas.getContext('2d');
-
-        // --- Core Mathematical Logic in JavaScript ---
-
-        function gcd(a, b) {
-            return b === 0 ? a : gcd(b, a % b);
-        }
-
-        function lcm(a, b) {
-            if (a === 0 || b === 0) return 0;
-            return Math.abs(a * b) / gcd(a, b);
-        }
-        
-        async function stringToDate(inputString) {
-            if (!inputString) return null;
-            const encoder = new TextEncoder();
-            const data = encoder.encode(inputString.toUpperCase());
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
-            const y = yearPart + 1970;
-            const monthPart = parseInt(hexDigest.slice(-6, -4), 16);<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exponential Sum Plotter</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            margin: 2rem;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        h1 {
-            color: #0056b3;
-        }
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin: 1.5rem 0;
-        }
-        #text-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #plot-container {
-            margin-top: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fafafa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 400px;
-        }
-        #plot-canvas {
-            max-width: 100%;
-            max-height: 100%;
-        }
-        .status-bar {
-            margin-top: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 24px;
-        }
-        #status-label {
-            color: #555;
-            text-align: left;
-        }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h1>Exponential Sum Plotter</h1>
         <p>Enter any string to generate a unique plot based on its cryptographic hash.</p>
 
         <div class="input-group">
@@ -261,24 +122,17 @@
 
         function lcm(a, b) {
             if (a === 0 || b === 0) return 0;
-            // Use BigInt for intermediate multiplication to prevent overflow with large numbers, though less likely now.
             return Number( (BigInt(a) * BigInt(b)) / BigInt(gcd(a, b)) );
         }
         
-        // --- CORRECTED stringToDate FUNCTION ---
         async function stringToDate(inputString) {
             if (!inputString) return null;
-            
-            // THE FIX: Use toLocaleUpperCase with the Turkish locale ('tr-TR')
-            // This ensures 'i' -> 'İ' and other Turkish characters are handled correctly and consistently.
             const normalizedString = inputString.toLocaleUpperCase('tr-TR');
-
             const encoder = new TextEncoder();
             const data = encoder.encode(normalizedString);
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            
             const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
             const y = yearPart + 1970;
             const monthPart = parseInt(hexDigest.slice(-6, -4), 16);
@@ -288,6 +142,7 @@
             return { m, d, y };
         }
 
+        // --- CORRECTED CALCULATION FUNCTION ---
         function calculateExponentialSum(m, d, y) {
             const lcm_md = lcm(m, d);
             const lcm_mdy = lcm(lcm_md, y);
@@ -299,16 +154,25 @@
 
             const zPoints = [];
             let currentZ = { re: 0, im: 0 };
-            for (let n = 0; n <= N; n++) {
-                const f = n / m + (n ** 2) / d + (n ** 3) / y;
-                
-                // Safety check for non-finite numbers which could result from precision loss with large n^3
-                if (!isFinite(f)) {
-                    console.warn(`Calculation stopped at n=${n} due to non-finite number. Plot may be incomplete.`);
-                    break; 
-                }
+            
+            // Convert to BigInts once for the loop
+            const m_b = BigInt(m);
+            const d_b = BigInt(d);
+            const y_b = BigInt(y);
 
-                const theta = 2 * Math.PI * f;
+            for (let n = 0; n <= N; n++) {
+                const n_b = BigInt(n);
+
+                // THE FIX: Use modular arithmetic to keep numbers small and preserve precision.
+                // We calculate the fractional part of each term separately.
+                const term1_frac = Number(n_b % m_b) / m;
+                const term2_frac = Number((n_b * n_b) % d_b) / d; // (n^2 % d) / d
+                const term3_frac = Number((n_b * n_b * n_b) % y_b) / y; // (n^3 % y) / y
+                
+                // The total fractional part of f. We only care about this.
+                const f_frac = (term1_frac + term2_frac + term3_frac) % 1.0;
+                
+                const theta = 2 * Math.PI * f_frac;
                 currentZ.re += Math.cos(theta);
                 currentZ.im += Math.sin(theta);
                 zPoints.push({ re: currentZ.re, im: currentZ.im });
@@ -317,65 +181,34 @@
         }
 
         function drawPlot(points) {
-            if (points.length === 0) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                return;
-            };
-            let minRe = points[0].re, maxRe = points[0].re;
-            let minIm = points[0].im, maxIm = points[0].im;
-
+            if (points.length === 0) { ctx.clearRect(0, 0, canvas.width, canvas.height); return; };
+            let minRe = points[0].re, maxRe = points[0].re, minIm = points[0].im, maxIm = points[0].im;
             for (const p of points) {
-                if (p.re < minRe) minRe = p.re;
-                if (p.re > maxRe) maxRe = p.re;
-                if (p.im < minIm) minIm = p.im;
-                if (p.im > maxIm) maxIm = p.im;
+                if (p.re < minRe) minRe = p.re; if (p.re > maxRe) maxRe = p.re;
+                if (p.im < minIm) minIm = p.im; if (p.im > maxIm) maxIm = p.im;
             }
-
-            const dataWidth = maxRe - minRe;
-            const dataHeight = maxIm - minIm;
-
+            const dataWidth = maxRe - minRe, dataHeight = maxIm - minIm;
             if (dataWidth === 0 && dataHeight === 0) {
-                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                 ctx.fillStyle = '#003366';
-                 ctx.fillRect(canvas.width/2 -1, canvas.height/2 -1, 2, 2);
-                 return;
+                 ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.fillStyle = '#003366';
+                 ctx.fillRect(canvas.width/2 -1, canvas.height/2 -1, 2, 2); return;
             }
-
-            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth;
-            const scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
+            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth, scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
             const scale = Math.min(scaleX, scaleY) * 0.9;
-
-            const scaledPlotWidth = dataWidth * scale;
-            const scaledPlotHeight = dataHeight * scale;
-            const marginX = (canvas.width - scaledPlotWidth) / 2;
-            const marginY = (canvas.height - scaledPlotHeight) / 2;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#003366';
-
+            const marginX = (canvas.width - dataWidth * scale) / 2, marginY = (canvas.height - dataHeight * scale) / 2;
+            ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.beginPath(); ctx.lineWidth = 1; ctx.strokeStyle = '#003366';
             for (let i = 0; i < points.length; i++) {
                 const p = points[i];
                 const canvasX = ((p.re - minRe) * scale) + marginX;
                 const canvasY = canvas.height - (((p.im - minIm) * scale) + marginY);
-                if (i === 0) {
-                    ctx.moveTo(canvasX, canvasY);
-                } else {
-                    ctx.lineTo(canvasX, canvasY);
-                }
+                if (i === 0) { ctx.moveTo(canvasX, canvasY); } else { ctx.lineTo(canvasX, canvasY); }
             }
             ctx.stroke();
         }
 
         async function handleGenerateClick() {
             const inputStr = textInput.value;
-            if (!inputStr) {
-                statusLabel.textContent = 'Status: Please enter a string.';
-                return;
-            }
-            generateButton.disabled = true;
-            downloadButton.disabled = true;
+            if (!inputStr) { statusLabel.textContent = 'Status: Please enter a string.'; return; }
+            generateButton.disabled = true; downloadButton.disabled = true;
             statusLabel.textContent = `Status: Hashing "${inputStr}"...`;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             try {
@@ -408,153 +241,8 @@
         generateButton.addEventListener('click', handleGenerateClick);
         downloadButton.addEventListener('click', handleDownloadClick);
         textInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handleGenerateClick();
-            }
+            if (event.key === 'Enter') { handleGenerateClick(); }
         });
     </script>
 </body>
 </html>
-            const m = (monthPart % 12) + 1;
-            const dayPart = parseInt(hexDigest.slice(-8, -6), 16);
-            const d = (dayPart % 28) + 1;
-            return { m, d, y };
-        }
-
-        function calculateExponentialSum(m, d, y) {
-            const lcm_md = lcm(m, d);
-            const lcm_mdy = lcm(lcm_md, y);
-            const N = 2 * lcm_mdy + 1;
-
-            if (N > 15000000) {
-                throw new Error(`Calculation aborted: N is too large (${N.toLocaleString()}).`);
-            }
-
-            const zPoints = [];
-            let currentZ = { re: 0, im: 0 };
-            for (let n = 0; n <= N; n++) {
-                const f = n / m + (n ** 2) / d + (n ** 3) / y;
-                const theta = 2 * Math.PI * f;
-                currentZ.re += Math.cos(theta);
-                currentZ.im += Math.sin(theta);
-                zPoints.push({ re: currentZ.re, im: currentZ.im });
-            }
-            return zPoints;
-        }
-
-        // --- CORRECTED DRAWING FUNCTION ---
-        function drawPlot(points) {
-            // 1. Find the data boundaries to scale the plot correctly
-            if (points.length === 0) return;
-            let minRe = points[0].re, maxRe = points[0].re;
-            let minIm = points[0].im, maxIm = points[0].im;
-
-            for (const p of points) {
-                if (p.re < minRe) minRe = p.re;
-                if (p.re > maxRe) maxRe = p.re;
-                if (p.im < minIm) minIm = p.im;
-                if (p.im > maxIm) maxIm = p.im;
-            }
-
-            // 2. Determine scale to fit the plot within the canvas with a margin
-            const dataWidth = maxRe - minRe;
-            const dataHeight = maxIm - minIm;
-
-            // Handle edge case of a single point or a straight line
-            if (dataWidth === 0 && dataHeight === 0) {
-                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                 ctx.fillRect(canvas.width/2 -1, canvas.height/2 -1, 2, 2); // Draw a dot
-                 return;
-            }
-
-            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth;
-            const scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
-            const scale = Math.min(scaleX, scaleY) * 0.9; // Use 90% of canvas space
-
-            // 3. Calculate margins to center the plot
-            const scaledPlotWidth = dataWidth * scale;
-            const scaledPlotHeight = dataHeight * scale;
-            const marginX = (canvas.width - scaledPlotWidth) / 2;
-            const marginY = (canvas.height - scaledPlotHeight) / 2;
-
-            // 4. Clear canvas and draw the plot line
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#003366';
-
-            for (let i = 0; i < points.length; i++) {
-                const p = points[i];
-                
-                // Apply the transformation from data coordinates to canvas coordinates
-                const canvasX = ((p.re - minRe) * scale) + marginX;
-                // Invert Y-axis because canvas (0,0) is top-left
-                const canvasY = canvas.height - (((p.im - minIm) * scale) + marginY);
-
-                if (i === 0) {
-                    ctx.moveTo(canvasX, canvasY);
-                } else {
-                    ctx.lineTo(canvasX, canvasY);
-                }
-            }
-            ctx.stroke();
-        }
-
-
-        // --- Main Application Logic & Event Handlers ---
-        async function handleGenerateClick() {
-            const inputStr = textInput.value;
-            if (!inputStr) {
-                statusLabel.textContent = 'Status: Please enter a string.';
-                return;
-            }
-
-            generateButton.disabled = true;
-            downloadButton.disabled = true;
-            statusLabel.textContent = `Status: Hashing "${inputStr}"...`;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            try {
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                const date = await stringToDate(inputStr);
-                statusLabel.textContent = `Status: Calculating...`;
-                
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                const points = calculateExponentialSum(date.m, date.d, date.y);
-                statusLabel.textContent = `Status: Plotting ${points.length.toLocaleString()} points...`;
-
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                drawPlot(points);
-                statusLabel.textContent = `Status: Plot generated for "${inputStr}"`;
-                downloadButton.disabled = false;
-
-            } catch (error) {
-                statusLabel.textContent = `Status: Error! ${error.message}`;
-                alert(`An error occurred: ${error.message}`);
-            } finally {
-                generateButton.disabled = false;
-            }
-        }
-
-        function handleDownloadClick() {
-            const link = document.createElement('a');
-            const filename = (textInput.value.replace(/[^a-z0-9]/gi, '_') || 'plot') + '.png';
-            link.download = filename;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        generateButton.addEventListener('click', handleGenerateClick);
-        downloadButton.addEventListener('click', handleDownloadClick);
-        textInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handleGenerateClick();
-            }
-        });
-    </script>
-</body>
-</html>
-
-
-
-
