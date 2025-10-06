@@ -135,7 +135,7 @@
             const hashBuffer = await crypto.subtle.digest('SHA-256', data);
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            const yearPart = parseInt(hexDigest.slice(-4), 16) % 5030;
+            const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
             const y = yearPart + 1970;
             const monthPart = parseInt(hexDigest.slice(-6, -4), 16);<!DOCTYPE html>
 <html lang="en">
@@ -279,7 +279,7 @@
             const hashArray = Array.from(new Uint8Array(hashBuffer));
             const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
             
-            const yearPart = parseInt(hexDigest.slice(-4), 16) % 5030;
+            const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
             const y = yearPart + 1970;
             const monthPart = parseInt(hexDigest.slice(-6, -4), 16);
             const m = (monthPart % 12) + 1;
@@ -554,6 +554,7 @@
     </script>
 </body>
 </html>
+
 
 
 
