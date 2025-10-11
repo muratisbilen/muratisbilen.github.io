@@ -68,8 +68,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let currentRow = 0;
     let currentCol = 0;
+    let isGameOver = false;
 
     function handleKeyPress(key) {
+        if (isGameOver) return; // Stop input if game is over
         if (currentCol < 5) {
             const row = gameBoard.children[currentRow];
             const box = row.children[currentCol];
@@ -79,12 +81,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleEnter() {
+        if (isGameOver) return;
         if (currentCol === 5) {
             const guess = getCurrentGuess();
             if (dictionary.includes(guess)) {
                 checkGuess(guess);
-                currentRow++;
-                currentCol = 0;
+                if (!isGameOver) {
+                    currentRow++;
+                    currentCol = 0;
+                }
             } else {
                 alert("Word not in our dictionary!");
             }
@@ -92,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function handleDelete() {
+        if (isGameOver) return;
         if (currentCol > 0) {
             currentCol--;
             const row = gameBoard.children[currentRow];
@@ -137,15 +143,17 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (guess === solution) {
+            isGameOver = true;
             const endTime = new Date();
             const timeTaken = (endTime - startTime) / 1000;
             const score = (1 / timeTaken) * (1 / Math.pow(currentRow + 1, 3));
             saveScore(score);
-            alert(`You won! Your score is ${score.toFixed(5)}`);
+            setTimeout(() => alert(`You won! Your score is ${score.toFixed(5)}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
+            isGameOver = true;
             saveScore(0);
-            alert(`You lost! The word was: ${solution}`);
+            setTimeout(() => alert(`You lost! The word was: ${solution}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
     }
@@ -234,7 +242,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
             });
     }
-
+    
+    // --- ON-SCREEN KEYBOARD SETUP ---
     const keyboard = [
         ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
@@ -262,6 +271,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
         keyboardContainer.appendChild(rowDiv);
     });
+    
+    // --- NEW: PHYSICAL KEYBOARD SUPPORT ---
+    document.addEventListener("keydown", (event) => {
+        // Do not run the keyboard listener if the user is typing their username
+        if (document.activeElement === usernameInput) return;
+    
+        const key = event.key.toLowerCase();
+        if (key === "enter") {
+            handleEnter();
+        } else if (key === "backspace") {
+            handleDelete();
+        } else if (key >= "a" && key <= "z" && key.length === 1) {
+            // Checks if the key is a single letter
+            handleKeyPress(key);
+        }
+    });
+
 
     async function startGame() {
         await loadWords(); // Wait for the dictionary to load
