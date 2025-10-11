@@ -3,278 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İsim Grafiği</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            flex-direction: column;
-            margin: 2rem;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-        h1 {
-            color: #0056b3;
-        }
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin: 1.5rem 0;
-        }
-        #text-input {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 1rem;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        button:active {
-            transform: scale(0.98);
-        }
-        button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
-        #plot-container {
-            margin-top: 1rem;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background-color: #fafafa;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 400px;
-        }
-        #plot-canvas {
-            max-width: 100%;
-            max-height: 100%;
-        }
-        .status-bar {
-            margin-top: 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            min-height: 24px;
-        }
-        #status-label {
-            color: #555;
-            text-align: left;
-        }
-    </style>
+    <title>Wordle Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div id="login-container">
+        <h1>Wordle</h1>
+        <input type="text" id="username-input" placeholder="Enter your username">
+        <button id="login-button">Play</button>
+    </div>
 
-    <div class="container">
-        <h1>İsim Grafiği</h1>
-        <p>İsminizi girin ve Euler'in özdeşlik formulüyle hesaplanan isim grafiğinizi oluşturun.</p>
-
-        <div class="input-group">
-            <input type="text" id="text-input" placeholder="e.g., Murat İşbilen">
-            <button id="generate-button">Grafiği Oluştur</button>
-        </div>
-
-        <div id="plot-container">
-            <canvas id="plot-canvas" width="600" height="600"></canvas>
-        </div>
-
-        <div class="status-bar">
-            <span id="status-label">Durum: Hazır</span>
-            <button id="download-button" disabled>Grafiği İndir</button>
+    <div id="game-container" class="hidden">
+        <div id="game-board"></div>
+        <div id="keyboard-cont"></div>
+        <div id="leaderboards">
+            <h2>Daily Leaderboard</h2>
+            <ul id="daily-leaderboard"></ul>
+            <h2>Monthly Leaderboard (Sum of Scores)</h2>
+            <ul id="monthly-leaderboard-sum"></ul>
+            <h2>Monthly Leaderboard (Average Score)</h2>
+            <ul id="monthly-leaderboard-mean"></ul>
         </div>
     </div>
 
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+
     <script>
-        const textInput = document.getElementById('text-input');
-        const generateButton = document.getElementById('generate-button');
-        const downloadButton = document.getElementById('download-button');
-        const statusLabel = document.getElementById('status-label');
-        const canvas = document.getElementById('plot-canvas');
-        const ctx = canvas.getContext('2d');
+        // PASTE YOUR FIREBASE CONFIGURATION HERE
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
 
-        function gcd(a, b) {
-            return b === 0 ? a : gcd(b, a % b);
-        }
-
-        function lcm(a, b) {
-            if (a === 0 || b === 0) return 0;
-            return Number((BigInt(a) * BigInt(b)) / BigInt(gcd(a, b)));
-        }
-        
-        async function stringToDate(inputString) {
-            if (!inputString) return null;
-            const normalizedString = inputString.toLocaleUpperCase('tr-TR');
-            const encoder = new TextEncoder();
-            const data = encoder.encode(normalizedString);
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-            const hashArray = Array.from(new Uint8Array(hashBuffer));
-            const hexDigest = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-            const yearPart = parseInt(hexDigest.slice(-4), 16) % 8030;
-            const y = yearPart + 1970;
-            const monthPart = parseInt(hexDigest.slice(-6, -4), 16);
-            const m = (monthPart % 12) + 1;
-            const dayPart = parseInt(hexDigest.slice(-8, -6), 16);
-            const d = (dayPart % 28) + 1;
-            return { m, d, y };
-        }
-
-        function calculateExponentialSum(m, d, y) {
-            const lcm_md = lcm(m, d);
-            const lcm_mdy = lcm(lcm_md, y);
-            const N = 2 * lcm_mdy + 1;
-
-            if (N > 15000000) {
-                throw new Error(`Calculation aborted: N is too large (${N.toLocaleString()}).`);
-            }
-
-            const zPoints = [];
-            let currentZ = { re: 0, im: 0 };
-            
-            const m_b = BigInt(m);
-            const d_b = BigInt(d);
-            const y_b = BigInt(y);
-
-            for (let n = 0; n <= N; n++) {
-                const n_b = BigInt(n);
-                
-                const term1_frac = Number(n_b % m_b) / m;
-                const term2_frac = Number((n_b * n_b) % d_b) / d;
-                const term3_frac = Number((n_b * n_b * n_b) % y_b) / y;
-                
-                const f_frac = (term1_frac + term2_frac + term3_frac) % 1.0;
-                
-                const theta = 2 * Math.PI * f_frac;
-                currentZ.re += Math.cos(theta);
-                currentZ.im += Math.sin(theta);
-                zPoints.push({ re: currentZ.re, im: currentZ.im });
-            }
-            return zPoints;
-        }
-
-        function drawPlot(points) {
-            if (points.length === 0) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                return;
-            }
-            
-            let minRe = points[0].re, maxRe = points[0].re, minIm = points[0].im, maxIm = points[0].im;
-            for (const p of points) {
-                if (p.re < minRe) minRe = p.re;
-                if (p.re > maxRe) maxRe = p.re;
-                if (p.im < minIm) minIm = p.im;
-                if (p.im > maxIm) maxIm = p.im;
-            }
-
-            const dataWidth = maxRe - minRe;
-            const dataHeight = maxIm - minIm;
-
-            if (dataWidth === 0 && dataHeight === 0) {
-                 ctx.clearRect(0, 0, canvas.width, canvas.height);
-                 ctx.fillStyle = '#003366';
-                 ctx.fillRect(canvas.width / 2 - 1, canvas.height / 2 - 1, 2, 2);
-                 return;
-            }
-
-            const scaleX = dataWidth === 0 ? 1 : canvas.width / dataWidth;
-            const scaleY = dataHeight === 0 ? 1 : canvas.height / dataHeight;
-            const scale = Math.min(scaleX, scaleY) * 0.9;
-            const marginX = (canvas.width - dataWidth * scale) / 2;
-            const marginY = (canvas.height - dataHeight * scale) / 2;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = '#003366';
-
-            for (let i = 0; i < points.length; i++) {
-                const p = points[i];
-                const canvasX = ((p.re - minRe) * scale) + marginX;
-                const canvasY = canvas.height - (((p.im - minIm) * scale) + marginY);
-                if (i === 0) {
-                    ctx.moveTo(canvasX, canvasY);
-                } else {
-                    ctx.lineTo(canvasX, canvasY);
-                }
-            }
-            ctx.stroke();
-        }
-
-        async function handleGenerateClick() {
-            const inputStr = textInput.value;
-            if (!inputStr) {
-                statusLabel.textContent = 'Durum: Bir isim girin.';
-                return;
-            }
-            
-            generateButton.disabled = true;
-            downloadButton.disabled = true;
-            statusLabel.textContent = `Status: "${inputStr}" için hash oluşturuluyor...`;
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            try {
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                const date = await stringToDate(inputStr);
-                statusLabel.textContent = `Durum: Hash oluşturuldu. Hesaplanıyor...`;
-                
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                const points = calculateExponentialSum(date.m, date.d, date.y);
-                statusLabel.textContent = `Durum: Grafik oluşturuluyor...`;
-                
-                await new Promise(resolve => requestAnimationFrame(resolve));
-                drawPlot(points);
-                statusLabel.textContent = `Durum: ${inputStr} için grafik oluşturuldu.`;
-                downloadButton.disabled = false;
-            } catch (error) {
-                statusLabel.textContent = `Durum: Hata! ${error.message}`;
-                alert(`An error occurred: ${error.message}`);
-            } finally {
-                generateButton.disabled = false;
-            }
-        }
-
-        function handleDownloadClick() {
-            const link = document.createElement('a');
-            const filename = (textInput.value.replace(/[^a-z0-9]/gi, '_') || 'plot') + '.png';
-            link.download = filename;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        }
-
-        generateButton.addEventListener('click', handleGenerateClick);
-        downloadButton.addEventListener('click', handleDownloadClick);
-        textInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
-                handleGenerateClick();
-            }
-        });
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
     </script>
+    <script src="script.js"></script>
 </body>
 </html>
-
-
-
-
