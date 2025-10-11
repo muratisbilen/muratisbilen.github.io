@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let startTime;
     let dictionary = [];
     let solution = "";
-    let keyStatus = {}; // NEW: To track the status of each letter for the keyboard
+    let keyStatus = {};
 
     // Function to fetch the word list
     async function loadWords() {
@@ -18,7 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error('Network response was not ok');
             }
             const text = await response.text();
-            dictionary = text.split('\n').map(word => word.trim().toLowerCase()).filter(word => word.length === 5);
+            // UPDATED: Use Turkish locale for consistency
+            dictionary = text.split('\n').map(word => word.trim().toLocaleLowerCase('tr-TR')).filter(word => word.length === 5);
             if (dictionary.length === 0) {
                  console.error("Dictionary is empty! Check words.txt.");
                  alert("Could not load word list. Please check the console for errors.");
@@ -89,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     currentCol = 0;
                 }
             } else {
-                alert("Kelime sözlükte yok!"); // "Word not in dictionary!" in Turkish
+                alert("Kelime sözlükte yok!");
             }
         }
     }
@@ -108,7 +109,8 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < 5; i++) {
             guess += row.children[i].textContent;
         }
-        return guess.toLowerCase();
+        // UPDATED: Use Turkish locale
+        return guess.toLocaleLowerCase('tr-TR');
     }
 
     function checkGuess(guess) {
@@ -141,7 +143,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
         
-        updateKeyboardDisplay(); // Update keyboard colors after guess
+        updateKeyboardDisplay();
 
         if (guess === solution) {
             isGameOver = true;
@@ -149,32 +151,29 @@ document.addEventListener("DOMContentLoaded", () => {
             const timeTaken = (endTime - startTime) / 1000;
             const score = (1 / timeTaken) * (1 / Math.pow(currentRow + 1, 3));
             saveScore(score);
-            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100); // "You won! Your score is..." in Turkish
+            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             isGameOver = true;
             saveScore(0);
-            setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100); // "You lost! The correct word was..." in Turkish
+            setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
     }
 
-    // NEW: Function to update the status of a letter
     function updateKeyStatus(letter, status) {
         const currentStatus = keyStatus[letter];
-        // Green has the highest priority, then yellow, then gray.
         if (currentStatus === 'green') return;
         if (currentStatus === 'yellow' && status !== 'green') return;
         keyStatus[letter] = status;
     }
 
-    // NEW: Function to apply colors to the on-screen keyboard
     function updateKeyboardDisplay() {
         for (const letter in keyStatus) {
             const keyButton = document.querySelector(`[data-key='${letter}']`);
             if (keyButton) {
-                keyButton.classList.remove('green', 'yellow', 'gray'); // Clear old status
-                keyButton.classList.add(keyStatus[letter]); // Add new status
+                keyButton.classList.remove('green', 'yellow', 'gray');
+                keyButton.classList.add(keyStatus[letter]);
             }
         }
     }
@@ -237,7 +236,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // --- UPDATED: TURKISH KEYBOARD LAYOUT ---
     const keyboard = [
         ["e", "r", "t", "y", "u", "ı", "o", "p", "ğ", "ü"],
         ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ş", "i"],
@@ -252,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const keyButton = document.createElement("button");
             keyButton.className = "key-button";
             keyButton.textContent = key;
-            keyButton.setAttribute('data-key', key); // NEW: Add data-key for easy selection
+            keyButton.setAttribute('data-key', key);
             keyButton.addEventListener("click", () => {
                 if (key === "enter") {
                     handleEnter();
@@ -267,16 +265,16 @@ document.addEventListener("DOMContentLoaded", () => {
         keyboardContainer.appendChild(rowDiv);
     });
 
-    // --- UPDATED: PHYSICAL KEYBOARD SUPPORT FOR TURKISH ---
     document.addEventListener("keydown", (event) => {
         if (document.activeElement === usernameInput) return;
 
-        const key = event.key.toLowerCase();
+        // UPDATED: Use Turkish locale
+        const key = event.key.toLocaleLowerCase('tr-TR');
         if (key === "enter") {
             handleEnter();
         } else if (key === "backspace") {
             handleDelete();
-        } else if (/^[a-zçğıöşü]$/.test(key)) { // Regex now includes Turkish characters
+        } else if (/^[a-zçğıöşü]$/.test(key)) {
             handleKeyPress(key);
         }
     });
