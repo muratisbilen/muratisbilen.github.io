@@ -6,6 +6,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let username = "";
     let startTime;
+    let dictionary = [];
+    let solution = "";
+
+    // Function to fetch the word list
+    async function loadWords() {
+        try {
+            const response = await fetch('words.txt');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const text = await response.text();
+            // Split by newline and filter out any empty lines
+            dictionary = text.split('\n').map(word => word.trim().toLowerCase()).filter(word => word.length === 5);
+            if (dictionary.length === 0) {
+                 console.error("Dictionary is empty! Check words.txt.");
+                 alert("Could not load word list. Please check the console for errors.");
+                 return;
+            }
+            console.log("Word list loaded successfully.");
+        } catch (error) {
+            console.error('Failed to load word list:', error);
+            alert("Failed to load the word list. The game cannot start.");
+        }
+    }
+
 
     loginButton.addEventListener("click", () => {
         const enteredUsername = usernameInput.value.trim();
@@ -16,7 +41,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    function checkIfPlayedToday() {
+    async function checkIfPlayedToday() {
         const today = new Date().toISOString().split('T')[0];
         const lastPlayDate = localStorage.getItem(`wordle_last_play_${username}`);
 
@@ -25,12 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
         } else {
             loginContainer.classList.add("hidden");
             gameContainer.classList.remove("hidden");
-            startGame();
+            await startGame(); // Make this async to wait for words
         }
     }
-
-    const dictionary = ["apple", "grape", "melon", "lemon", "peach"]; // A small dictionary for demonstration
-    let solution = dictionary[Math.floor(Math.random() * dictionary.length)];
 
     const gameBoard = document.getElementById("game-board");
     for (let i = 0; i < 6; i++) {
@@ -64,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 currentRow++;
                 currentCol = 0;
             } else {
-                alert("Word not in dictionary!");
+                alert("Word not in our dictionary!");
             }
         }
     }
@@ -89,16 +111,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function checkGuess(guess) {
         const row = gameBoard.children[currentRow];
-        for (let i = 0; i < 5; i++) {
-            const box = row.children[i];
-            const letter = guess[i];
+        const solutionLetters = solution.split('');
+        const guessLetters = guess.split('');
 
-            if (letter === solution[i]) {
-                box.classList.add("green");
-            } else if (solution.includes(letter)) {
-                box.classList.add("yellow");
-            } else {
-                box.classList.add("gray");
+        // Rule 1: Correct letters in correct position (Green)
+        for (let i = 0; i < 5; i++) {
+            if (guessLetters[i] === solutionLetters[i]) {
+                row.children[i].classList.add("green");
+                solutionLetters[i] = null; // Mark as used
+                guessLetters[i] = null; // Mark as handled
+            }
+        }
+
+        // Rule 2 & 3: Correct letters in wrong position (Yellow)
+        for (let i = 0; i < 5; i++) {
+            if (guessLetters[i] !== null) {
+                const letterIndex = solutionLetters.indexOf(guessLetters[i]);
+                if (letterIndex > -1) {
+                    row.children[i].classList.add("yellow");
+                    solutionLetters[letterIndex] = null; // Mark as used
+                } else {
+                    row.children[i].classList.add("gray");
+                }
             }
         }
 
@@ -111,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             saveScore(0);
-            alert(`You lost! The word was ${solution}`);
+            alert(`You lost! The word was: ${solution}`);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
     }
@@ -155,6 +189,7 @@ document.addEventListener("DOMContentLoaded", () => {
         db.collection("dailyScores")
             .where("date", "==", today)
             .orderBy("score", "desc")
+            .limit(10)
             .get()
             .then((querySnapshot) => {
                 const dailyLeaderboard = document.getElementById("daily-leaderboard");
@@ -170,7 +205,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const month = new Date().toISOString().slice(0, 7);
         db.collection("monthlyScores")
             .where("month", "==", month)
-            .orderBy("totalScore", "desc")
             .get()
             .then((querySnapshot) => {
                 const monthlyLeaderboardSum = document.getElementById("monthly-leaderboard-sum");
@@ -182,18 +216,20 @@ document.addEventListener("DOMContentLoaded", () => {
                     monthlyData.push(doc.data());
                 });
 
-                // Sum
-                monthlyData.forEach(data => {
+                // Sum (Top 10)
+                monthlyData.sort((a, b) => b.totalScore - a.totalScore);
+                monthlyData.slice(0, 10).forEach(data => {
                     const li = document.createElement("li");
                     li.textContent = `${data.username}: ${data.totalScore.toFixed(5)}`;
                     monthlyLeaderboardSum.appendChild(li);
                 });
 
-                // Mean
+                // Mean (Top 10)
                 monthlyData.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
-                monthlyData.forEach(data => {
+                monthlyData.slice(0, 10).forEach(data => {
                     const li = document.createElement("li");
-                    li.textContent = `${data.username}: ${(data.totalScore / data.playCount).toFixed(5)}`;
+                    const avgScore = (data.playCount > 0) ? (data.totalScore / data.playCount) : 0;
+                    li.textContent = `${data.username}: ${avgScore.toFixed(5)}`;
                     monthlyLeaderboardMean.appendChild(li);
                 });
             });
@@ -227,9 +263,14 @@ document.addEventListener("DOMContentLoaded", () => {
         keyboardContainer.appendChild(rowDiv);
     });
 
-    function startGame() {
-        startTime = new Date();
-        displayLeaderboards();
+    async function startGame() {
+        await loadWords(); // Wait for the dictionary to load
+        if (dictionary.length > 0) {
+           solution = dictionary[Math.floor(Math.random() * dictionary.length)];
+           console.log(`Today's word (for testing): ${solution}`);
+           startTime = new Date();
+           displayLeaderboards();
+        }
     }
 
     const storedUsername = localStorage.getItem("wordle_username");
