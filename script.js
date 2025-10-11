@@ -18,7 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 throw new Error('Network response was not ok');
             }
             const text = await response.text();
-            // UPDATED: Use Turkish locale for consistency
             dictionary = text.split('\n').map(word => word.trim().toLocaleLowerCase('tr-TR')).filter(word => word.length === 5);
             if (dictionary.length === 0) {
                  console.error("Dictionary is empty! Check words.txt.");
@@ -109,7 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
         for (let i = 0; i < 5; i++) {
             guess += row.children[i].textContent;
         }
-        // UPDATED: Use Turkish locale
         return guess.toLocaleLowerCase('tr-TR');
     }
 
@@ -145,17 +143,19 @@ document.addEventListener("DOMContentLoaded", () => {
         
         updateKeyboardDisplay();
 
+        const endTime = new Date();
+        const timeTaken = (endTime - startTime) / 1000;
+        const steps = currentRow + 1;
+
         if (guess === solution) {
             isGameOver = true;
-            const endTime = new Date();
-            const timeTaken = (endTime - startTime) / 1000;
-            const score = (1 / timeTaken) * (1 / Math.pow(currentRow + 1, 3));
-            saveScore(score);
+            const score = (1 / timeTaken) * (1 / Math.pow(steps, 3));
+            saveScore(score, timeTaken, steps);
             setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             isGameOver = true;
-            saveScore(0);
+            saveScore(0, timeTaken, 6); // Save with 0 score, but record time and 6 steps
             setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
@@ -178,20 +178,31 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function saveScore(score) {
+    // UPDATED: Function now accepts time and steps
+    function saveScore(score, time, steps) {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
-        db.collection("dailyScores").add({ username, score, date: today });
+        // UPDATED: Save new fields to daily scores
+        db.collection("dailyScores").add({ username, score, date: today, time, steps });
 
         const userMonthlyDocRef = db.collection("monthlyScores").doc(`${username}_${month}`);
         db.runTransaction((transaction) => {
             return transaction.get(userMonthlyDocRef).then((doc) => {
                 if (!doc.exists) {
-                    transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1 });
+                    // UPDATED: Add new total fields for monthly tracking
+                    transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
                 } else {
                     const newTotalScore = doc.data().totalScore + score;
                     const newPlayCount = doc.data().playCount + 1;
-                    transaction.update(userMonthlyDocRef, { totalScore: newTotalScore, playCount: newPlayCount });
+                    const newTotalTime = (doc.data().totalTime || 0) + time;
+                    const newTotalSteps = (doc.data().totalSteps || 0) + steps;
+                    // UPDATED: Update monthly totals
+                    transaction.update(userMonthlyDocRef, { 
+                        totalScore: newTotalScore, 
+                        playCount: newPlayCount,
+                        totalTime: newTotalTime,
+                        totalSteps: newTotalSteps
+                    });
                 }
             });
         });
@@ -205,7 +216,9 @@ document.addEventListener("DOMContentLoaded", () => {
             dailyLeaderboard.innerHTML = "";
             querySnapshot.forEach((doc) => {
                 const li = document.createElement("li");
-                li.textContent = `${doc.data().username}: ${doc.data().score.toFixed(5)}`;
+                const data = doc.data();
+                // UPDATED: Display score, time, and steps in the leaderboard
+                li.textContent = `${data.username}: ${data.score.toFixed(5)} (${data.time.toFixed(1)}s, ${data.steps} adım)`;
                 dailyLeaderboard.appendChild(li);
             });
         });
@@ -252,13 +265,9 @@ document.addEventListener("DOMContentLoaded", () => {
             keyButton.textContent = key;
             keyButton.setAttribute('data-key', key);
             keyButton.addEventListener("click", () => {
-                if (key === "enter") {
-                    handleEnter();
-                } else if (key === "del") {
-                    handleDelete();
-                } else {
-                    handleKeyPress(key);
-                }
+                if (key === "enter") { handleEnter(); } 
+                else if (key === "del") { handleDelete(); } 
+                else { handleKeyPress(key); }
             });
             rowDiv.appendChild(keyButton);
         });
@@ -267,22 +276,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.addEventListener("keydown", (event) => {
         if (document.activeElement === usernameInput) return;
-
-        // UPDATED: Use Turkish locale
         const key = event.key.toLocaleLowerCase('tr-TR');
-        if (key === "enter") {
-            handleEnter();
-        } else if (key === "backspace") {
-            handleDelete();
-        } else if (/^[a-zçğıöşü]$/.test(key)) {
-            handleKeyPress(key);
-        }
+        if (key === "enter") { handleEnter(); } 
+        else if (key === "backspace") { handleDelete(); } 
+        else if (/^[a-zçğıöşü]$/.test(key)) { handleKeyPress(key); }
     });
 
     async function startGame() {
         await loadWords();
         if (dictionary.length > 0) {
-           solution = dictionary[Math.floor(Math.random() * dictionary.length)];
+           // --- NEW: DAILY WORD LOGIC ---
+           // 1. Define a starting date (epoch) for your game.
+           const epoch = new Date("2025-01-01T00:00:00Z");
+           
+           // 2. Get the current date in UTC.
+           const now = new Date();
+           const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+           // 3. Calculate the number of days that have passed since the epoch.
+           const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
+           
+           // 4. Use the day index to pick a word from the dictionary. The modulo (%) ensures it wraps around.
+           const wordIndex = dayIndex % dictionary.length;
+           solution = dictionary[wordIndex];
+
            console.log(`Today's word (for testing): ${solution}`);
            startTime = new Date();
            displayLeaderboards();
