@@ -9,20 +9,39 @@
 <body>
     <div id="login-container">
         <h1>Wordle</h1>
-        <input type="text" id="username-input" placeholder="Enter your username">
-        <button id="login-button">Play</button>
+        <input type="text" id="username-input" placeholder="Kullanıcı adınızı girin">
+        <button id="login-button">Oyna</button>
     </div>
 
     <div id="game-container" class="hidden">
+        <div class="header">
+            <h1>Kelime Oyunu</h1>
+            <button id="leaderboard-btn">🏆 Puan Tablosu</button>
+        </div>
         <div id="game-board"></div>
         <div id="keyboard-cont"></div>
-        <div id="leaderboards">
-            <h2>Daily Leaderboard</h2>
-            <ul id="daily-leaderboard"></ul>
-            <h2>Monthly Leaderboard (Sum of Scores)</h2>
-            <ul id="monthly-leaderboard-sum"></ul>
-            <h2>Monthly Leaderboard (Average Score)</h2>
-            <ul id="monthly-leaderboard-mean"></ul>
+    </div>
+
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h2>Puan Tabloları</h2>
+            <div class="tab-buttons">
+                <button class="tab-link active" data-tab="daily">Günlük</button>
+                <button class="tab-link" data-tab="monthly-sum">Aylık (Toplam)</button>
+                <button class="tab-link" data-tab="monthly-mean">Aylık (Ortalama)</button>
+            </div>
+
+            <div id="daily-tab" class="tab-content active">
+                <ul id="daily-leaderboard-list"></ul>
+            </div>
+            <div id="monthly-sum-tab" class="tab-content">
+                <ul id="monthly-leaderboard-sum-list"></ul>
+            </div>
+            <div id="monthly-mean-tab" class="tab-content">
+                <ul id="monthly-leaderboard-mean-list"></ul>
+            </div>
         </div>
     </div>
 
@@ -33,14 +52,14 @@
     <script>
         // PASTE YOUR FIREBASE CONFIGURATION HERE
         const firebaseConfig = {
-          apiKey: "AIzaSyBuM3n3_r9o5SlJ8VSwRx-dhHf5fbAL3Sg",
-          authDomain: "baydledb.firebaseapp.com",
-          projectId: "baydledb",
-          storageBucket: "baydledb.firebasestorage.app",
-          messagingSenderId: "16708584389",
-          appId: "1:16708584389:web:61d8b684a5c512023181ac",
-          measurementId: "G-H67RVJRKD7"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
+
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
@@ -49,5 +68,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
-
