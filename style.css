@@ -9,12 +9,19 @@ body {
     margin: 0;
 }
 
-#login-container, #game-container {
+/* CORRECTED SECTION */
+#login-container {
     text-align: center;
+    display: block; /* Ensures this is visible by default */
 }
 
+#game-container {
+    text-align: center;
+}
+/* END CORRECTION */
+
 .hidden {
-    display: none;
+    display: none !important; /* Use !important to ensure this rule always applies */
 }
 
 .header {
