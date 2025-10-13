@@ -7,7 +7,7 @@ body {
     background-color: #f0f0f0;
 }
 
-#login-container, #game-container {
+#login-container, #game-container, #leaderboard-container {
     text-align: center;
 }
 
@@ -40,24 +40,11 @@ body {
     text-transform: uppercase;
 }
 
-.green {
-    background-color: #6aaa64;
-    color: white;
-}
+.green { background-color: #6aaa64; color: white; }
+.yellow { background-color: #c9b458; color: white; }
+.gray { background-color: #787c7e; color: white; }
 
-.yellow {
-    background-color: #c9b458;
-    color: white;
-}
-
-.gray {
-    background-color: #787c7e;
-    color: white;
-}
-
-#keyboard-cont {
-    margin-top: 20px;
-}
+#keyboard-cont { margin-top: 20px; }
 
 .keyboard-row {
     display: flex;
@@ -73,6 +60,17 @@ body {
     cursor: pointer;
 }
 
-#leaderboards {
-    margin-top: 20px;
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
 }
+
+button:hover {
+    background-color: #45a049;
+}
+
+#leaderboard
