@@ -212,14 +212,13 @@ document.addEventListener("DOMContentLoaded", () => {
         displayLeaderboards();
     }
 
-    // 🏆 LEADERBOARD TABLES with RANK
+    // 🏆 Leaderboard (table version, client-side sorting for daily)
     function displayLeaderboards() {
         const today = new Date().toISOString().split('T')[0];
         const dailyEl = document.getElementById("daily-leaderboard");
         const monthlySumEl = document.getElementById("monthly-leaderboard-sum");
         const monthlyMeanEl = document.getElementById("monthly-leaderboard-mean");
 
-        // Helper: builds an HTML table from an array of objects
         function buildTable(headers, rows) {
             const table = document.createElement("table");
             const thead = document.createElement("thead");
@@ -249,18 +248,22 @@ document.addEventListener("DOMContentLoaded", () => {
             return table;
         }
 
-        // DAILY
-        db.collection("dailyScores").where("date", "==", today).orderBy("score", "desc").limit(10).get().then((qs) => {
+        // DAILY leaderboard (client-side sort)
+        db.collection("dailyScores").where("date", "==", today).get().then((qs) => {
             dailyEl.innerHTML = "";
-            const rows = [];
-            qs.forEach(doc => {
-                const d = doc.data();
-                rows.push([d.username, d.score.toFixed(5), d.time.toFixed(1) + "s", d.steps]);
-            });
+            const data = [];
+            qs.forEach(doc => data.push(doc.data()));
+            data.sort((a, b) => b.score - a.score);
+            const rows = data.slice(0, 10).map(d => [
+                d.username,
+                d.score.toFixed(5),
+                d.time.toFixed(1) + "s",
+                d.steps
+            ]);
             dailyEl.appendChild(buildTable(["#", "Username", "Score", "Time", "Steps"], rows));
         });
 
-        // MONTHLY
+        // MONTHLY leaderboard
         const month = new Date().toISOString().slice(0, 7);
         db.collection("monthlyScores").where("month", "==", month).get().then((qs) => {
             monthlySumEl.innerHTML = "";
@@ -281,9 +284,9 @@ document.addEventListener("DOMContentLoaded", () => {
             // MEAN Leaderboard
             data.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
             const meanRows = data.slice(0, 10).map(d => {
-                const avgScore = (d.playCount > 0) ? d.totalScore / d.playCount : 0;
-                const avgTime = (d.playCount > 0) ? d.totalTime / d.playCount : 0;
-                const avgSteps = (d.playCount > 0) ? d.totalSteps / d.playCount : 0;
+                const avgScore = d.totalScore / d.playCount;
+                const avgTime = d.totalTime / d.playCount;
+                const avgSteps = d.totalSteps / d.playCount;
                 return [d.username, avgScore.toFixed(5), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
             });
             monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
