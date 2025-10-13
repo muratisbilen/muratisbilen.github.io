@@ -1,8 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
     const loginContainer = document.getElementById("login-container");
     const gameContainer = document.getElementById("game-container");
+    const leaderboardContainer = document.getElementById("leaderboard-container");
     const usernameInput = document.getElementById("username-input");
     const loginButton = document.getElementById("login-button");
+    const showLeaderboardButton = document.getElementById("show-leaderboard-button");
+    const backButton = document.getElementById("back-button");
 
     let username = "";
     let startTime;
@@ -31,7 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-
     loginButton.addEventListener("click", () => {
         const enteredUsername = usernameInput.value.trim();
         if (enteredUsername) {
@@ -40,6 +42,18 @@ document.addEventListener("DOMContentLoaded", () => {
             checkIfPlayedToday();
         }
     });
+
+    showLeaderboardButton.addEventListener("click", () => {
+        loginContainer.classList.add("hidden");
+        leaderboardContainer.classList.remove("hidden");
+        displayLeaderboards();
+    });
+
+    backButton.addEventListener("click", () => {
+        leaderboardContainer.classList.add("hidden");
+        loginContainer.classList.remove("hidden");
+    });
+
 
     async function checkIfPlayedToday() {
         const today = new Date().toISOString().split('T')[0];
@@ -110,6 +124,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         return guess.toLocaleLowerCase('tr-TR');
     }
+    
+    function showLeaderboardAfterGame() {
+        gameContainer.classList.add("hidden");
+        leaderboardContainer.classList.remove("hidden");
+    }
 
     function checkGuess(guess) {
         const row = gameBoard.children[currentRow];
@@ -151,12 +170,18 @@ document.addEventListener("DOMContentLoaded", () => {
             isGameOver = true;
             const score = (1 / timeTaken) * (1 / Math.pow(steps, 3));
             saveScore(score, timeTaken, steps);
-            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
+            setTimeout(() => {
+                alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`);
+                showLeaderboardAfterGame();
+            }, 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             isGameOver = true;
             saveScore(0, timeTaken, 6); // Save with 0 score, but record time and 6 steps
-            setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
+            setTimeout(() => {
+                alert(`Kaybettiniz! Doğru kelime: ${solution}`);
+                showLeaderboardAfterGame();
+            }, 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
     }
@@ -178,25 +203,21 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // UPDATED: Function now accepts time and steps
     function saveScore(score, time, steps) {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
-        // UPDATED: Save new fields to daily scores
         db.collection("dailyScores").add({ username, score, date: today, time, steps });
 
         const userMonthlyDocRef = db.collection("monthlyScores").doc(`${username}_${month}`);
         db.runTransaction((transaction) => {
             return transaction.get(userMonthlyDocRef).then((doc) => {
                 if (!doc.exists) {
-                    // UPDATED: Add new total fields for monthly tracking
                     transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
                 } else {
                     const newTotalScore = doc.data().totalScore + score;
                     const newPlayCount = doc.data().playCount + 1;
                     const newTotalTime = (doc.data().totalTime || 0) + time;
                     const newTotalSteps = (doc.data().totalSteps || 0) + steps;
-                    // UPDATED: Update monthly totals
                     transaction.update(userMonthlyDocRef, { 
                         totalScore: newTotalScore, 
                         playCount: newPlayCount,
@@ -205,47 +226,66 @@ document.addEventListener("DOMContentLoaded", () => {
                     });
                 }
             });
+        }).then(() => {
+            displayLeaderboards();
         });
-        displayLeaderboards();
     }
 
     function displayLeaderboards() {
         const today = new Date().toISOString().split('T')[0];
         db.collection("dailyScores").where("date", "==", today).orderBy("score", "desc").limit(10).get().then((querySnapshot) => {
             const dailyLeaderboard = document.getElementById("daily-leaderboard");
-            dailyLeaderboard.innerHTML = "";
+            dailyLeaderboard.innerHTML = "<li>Loading...</li>"; // Show loading state
+            let dailyResults = [];
             querySnapshot.forEach((doc) => {
-                const li = document.createElement("li");
-                const data = doc.data();
-                // UPDATED: Display score, time, and steps in the leaderboard
-                li.textContent = `${data.username}: ${data.score.toFixed(5)} (${data.time.toFixed(1)}s, ${data.steps} adım)`;
-                dailyLeaderboard.appendChild(li);
+                dailyResults.push(doc.data());
             });
+            dailyLeaderboard.innerHTML = ""; // Clear loading
+            if (dailyResults.length === 0) {
+                 dailyLeaderboard.innerHTML = "<li>No scores yet today.</li>";
+            } else {
+                dailyResults.forEach(data => {
+                    const li = document.createElement("li");
+                    li.textContent = `${data.username}: ${data.score.toFixed(5)} (${data.time.toFixed(1)}s, ${data.steps} adım)`;
+                    dailyLeaderboard.appendChild(li);
+                });
+            }
         });
 
         const month = new Date().toISOString().slice(0, 7);
         db.collection("monthlyScores").where("month", "==", month).get().then((querySnapshot) => {
             const monthlyLeaderboardSum = document.getElementById("monthly-leaderboard-sum");
             const monthlyLeaderboardMean = document.getElementById("monthly-leaderboard-mean");
-            monthlyLeaderboardSum.innerHTML = "";
-            monthlyLeaderboardMean.innerHTML = "";
+            monthlyLeaderboardSum.innerHTML = "<li>Loading...</li>";
+            monthlyLeaderboardMean.innerHTML = "<li>Loading...</li>";
+            
             let monthlyData = [];
             querySnapshot.forEach((doc) => { monthlyData.push(doc.data()); });
 
-            monthlyData.sort((a, b) => b.totalScore - a.totalScore);
-            monthlyData.slice(0, 10).forEach(data => {
-                const li = document.createElement("li");
-                li.textContent = `${data.username}: ${data.totalScore.toFixed(5)}`;
-                monthlyLeaderboardSum.appendChild(li);
-            });
+            monthlyLeaderboardSum.innerHTML = "";
+            if (monthlyData.length === 0) {
+                 monthlyLeaderboardSum.innerHTML = "<li>No scores yet this month.</li>";
+            } else {
+                monthlyData.sort((a, b) => b.totalScore - a.totalScore);
+                monthlyData.slice(0, 10).forEach(data => {
+                    const li = document.createElement("li");
+                    li.textContent = `${data.username}: ${data.totalScore.toFixed(5)}`;
+                    monthlyLeaderboardSum.appendChild(li);
+                });
+            }
 
-            monthlyData.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
-            monthlyData.slice(0, 10).forEach(data => {
-                const li = document.createElement("li");
-                const avgScore = (data.playCount > 0) ? (data.totalScore / data.playCount) : 0;
-                li.textContent = `${data.username}: ${avgScore.toFixed(5)}`;
-                monthlyLeaderboardMean.appendChild(li);
-            });
+            monthlyLeaderboardMean.innerHTML = "";
+             if (monthlyData.length === 0) {
+                 monthlyLeaderboardMean.innerHTML = "<li>No scores yet this month.</li>";
+            } else {
+                monthlyData.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
+                monthlyData.slice(0, 10).forEach(data => {
+                    const li = document.createElement("li");
+                    const avgScore = (data.playCount > 0) ? (data.totalScore / data.playCount) : 0;
+                    li.textContent = `${data.username}: ${avgScore.toFixed(5)}`;
+                    monthlyLeaderboardMean.appendChild(li);
+                });
+            }
         });
     }
 
@@ -285,24 +325,15 @@ document.addEventListener("DOMContentLoaded", () => {
     async function startGame() {
         await loadWords();
         if (dictionary.length > 0) {
-           // --- NEW: DAILY WORD LOGIC ---
-           // 1. Define a starting date (epoch) for your game.
            const epoch = new Date("2025-01-01T00:00:00Z");
-           
-           // 2. Get the current date in UTC.
            const now = new Date();
            const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-
-           // 3. Calculate the number of days that have passed since the epoch.
            const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
-           
-           // 4. Use the day index to pick a word from the dictionary. The modulo (%) ensures it wraps around.
            const wordIndex = dayIndex % dictionary.length;
            solution = dictionary[wordIndex];
 
            console.log(`Today's word (for testing): ${solution}`);
            startTime = new Date();
-           displayLeaderboards();
         }
     }
 
