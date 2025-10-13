@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let solution = "";
     let keyStatus = {};
 
-    // Load the word list
+    // Load words
     async function loadWords() {
         try {
             const response = await fetch('words.txt');
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Login button handler
+    // Login
     loginButton.addEventListener("click", () => {
         const enteredUsername = usernameInput.value.trim();
         if (enteredUsername) {
@@ -59,13 +59,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Create game board
+    // Create board
     const gameBoard = document.getElementById("game-board");
     for (let i = 0; i < 6; i++) {
-        let row = document.createElement("div");
+        const row = document.createElement("div");
         row.className = "letter-row";
         for (let j = 0; j < 5; j++) {
-            let box = document.createElement("div");
+            const box = document.createElement("div");
             box.className = "letter-box";
             row.appendChild(box);
         }
@@ -132,7 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        // Yellow or Gray
+        // Yellow / Gray
         for (let i = 0; i < 5; i++) {
             if (guessLetters[i] !== null) {
                 const letterIndex = solutionLetters.indexOf(guessLetters[i]);
@@ -146,7 +146,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
-        
+
         updateKeyboardDisplay();
 
         const endTime = new Date();
@@ -184,7 +184,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Save Score
+    // Save score
     function saveScore(score, time, steps) {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
@@ -212,51 +212,89 @@ document.addEventListener("DOMContentLoaded", () => {
         displayLeaderboards();
     }
 
-    // Display Leaderboards
+    // 🏆 LEADERBOARD TABLES with RANK
     function displayLeaderboards() {
         const today = new Date().toISOString().split('T')[0];
-        db.collection("dailyScores").where("date", "==", today).orderBy("score", "desc").limit(10).get().then((querySnapshot) => {
-            const dailyLeaderboard = document.getElementById("daily-leaderboard");
-            dailyLeaderboard.innerHTML = "";
-            querySnapshot.forEach((doc) => {
-                const li = document.createElement("li");
-                const data = doc.data();
-                li.textContent = `${data.username}: ${data.score.toFixed(5)} (${data.time.toFixed(1)}s, ${data.steps} adım)`;
-                dailyLeaderboard.appendChild(li);
+        const dailyEl = document.getElementById("daily-leaderboard");
+        const monthlySumEl = document.getElementById("monthly-leaderboard-sum");
+        const monthlyMeanEl = document.getElementById("monthly-leaderboard-mean");
+
+        // Helper: builds an HTML table from an array of objects
+        function buildTable(headers, rows) {
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const headRow = document.createElement("tr");
+            headers.forEach(h => {
+                const th = document.createElement("th");
+                th.textContent = h;
+                headRow.appendChild(th);
             });
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement("tbody");
+            rows.forEach((r, i) => {
+                const tr = document.createElement("tr");
+                const rankCell = document.createElement("td");
+                rankCell.textContent = i + 1;
+                tr.appendChild(rankCell);
+                r.forEach(cell => {
+                    const td = document.createElement("td");
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            return table;
+        }
+
+        // DAILY
+        db.collection("dailyScores").where("date", "==", today).orderBy("score", "desc").limit(10).get().then((qs) => {
+            dailyEl.innerHTML = "";
+            const rows = [];
+            qs.forEach(doc => {
+                const d = doc.data();
+                rows.push([d.username, d.score.toFixed(5), d.time.toFixed(1) + "s", d.steps]);
+            });
+            dailyEl.appendChild(buildTable(["#", "Username", "Score", "Time", "Steps"], rows));
         });
 
+        // MONTHLY
         const month = new Date().toISOString().slice(0, 7);
-        db.collection("monthlyScores").where("month", "==", month).get().then((querySnapshot) => {
-            const monthlyLeaderboardSum = document.getElementById("monthly-leaderboard-sum");
-            const monthlyLeaderboardMean = document.getElementById("monthly-leaderboard-mean");
-            monthlyLeaderboardSum.innerHTML = "";
-            monthlyLeaderboardMean.innerHTML = "";
-            let monthlyData = [];
-            querySnapshot.forEach((doc) => { monthlyData.push(doc.data()); });
+        db.collection("monthlyScores").where("month", "==", month).get().then((qs) => {
+            monthlySumEl.innerHTML = "";
+            monthlyMeanEl.innerHTML = "";
+            const data = [];
+            qs.forEach(doc => data.push(doc.data()));
 
-            monthlyData.sort((a, b) => b.totalScore - a.totalScore);
-            monthlyData.slice(0, 10).forEach(data => {
-                const li = document.createElement("li");
-                li.textContent = `${data.username}: ${data.totalScore.toFixed(5)}`;
-                monthlyLeaderboardSum.appendChild(li);
-            });
+            // SUM Leaderboard
+            data.sort((a, b) => b.totalScore - a.totalScore);
+            const sumRows = data.slice(0, 10).map(d => [
+                d.username,
+                d.totalScore.toFixed(5),
+                (d.totalTime || 0).toFixed(1) + "s",
+                d.totalSteps || 0
+            ]);
+            monthlySumEl.appendChild(buildTable(["#", "Username", "Total Score", "Total Time", "Total Steps"], sumRows));
 
-            monthlyData.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
-            monthlyData.slice(0, 10).forEach(data => {
-                const li = document.createElement("li");
-                const avgScore = (data.playCount > 0) ? (data.totalScore / data.playCount) : 0;
-                li.textContent = `${data.username}: ${avgScore.toFixed(5)}`;
-                monthlyLeaderboardMean.appendChild(li);
+            // MEAN Leaderboard
+            data.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
+            const meanRows = data.slice(0, 10).map(d => {
+                const avgScore = (d.playCount > 0) ? d.totalScore / d.playCount : 0;
+                const avgTime = (d.playCount > 0) ? d.totalTime / d.playCount : 0;
+                const avgSteps = (d.playCount > 0) ? d.totalSteps / d.playCount : 0;
+                return [d.username, avgScore.toFixed(5), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
             });
+            monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
         });
     }
 
     // Keyboard
     const keyboard = [
-        ["e", "r", "t", "y", "u", "ı", "o", "p", "ğ", "ü"],
-        ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ş", "i"],
-        ["enter", "z", "c", "v", "b", "n", "m", "ö", "ç", "del"]
+        ["e","r","t","y","u","ı","o","p","ğ","ü"],
+        ["a","s","d","f","g","h","j","k","l","ş","i"],
+        ["enter","z","c","v","b","n","m","ö","ç","del"]
     ];
 
     const keyboardContainer = document.getElementById("keyboard-cont");
@@ -267,7 +305,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const keyButton = document.createElement("button");
             keyButton.className = "key-button";
             keyButton.textContent = key;
-            keyButton.setAttribute('data-key', key);
+            keyButton.setAttribute("data-key", key);
             keyButton.addEventListener("click", () => {
                 if (key === "enter") handleEnter();
                 else if (key === "del") handleDelete();
@@ -301,7 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Leaderboard Navigation
+    // Navigation
     leaderboardBtnLogin.addEventListener("click", () => {
         loginContainer.classList.add("hidden");
         leaderboardContainer.classList.remove("hidden");
@@ -328,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
         gameContainer.classList.remove("hidden");
     });
 
-    // Restore stored username
+    // Restore username
     const storedUsername = localStorage.getItem("wordle_username");
     if (storedUsername) {
         usernameInput.value = storedUsername;
