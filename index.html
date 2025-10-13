@@ -11,19 +11,22 @@
         <h1>Wordle</h1>
         <input type="text" id="username-input" placeholder="Enter your username">
         <button id="login-button">Play</button>
+        <button id="show-leaderboard-button">Leaderboard</button>
     </div>
 
     <div id="game-container" class="hidden">
         <div id="game-board"></div>
         <div id="keyboard-cont"></div>
-        <div id="leaderboards">
-            <h2>Daily Leaderboard</h2>
-            <ul id="daily-leaderboard"></ul>
-            <h2>Monthly Leaderboard (Sum of Scores)</h2>
-            <ul id="monthly-leaderboard-sum"></ul>
-            <h2>Monthly Leaderboard (Average Score)</h2>
-            <ul id="monthly-leaderboard-mean"></ul>
-        </div>
+    </div>
+
+    <div id="leaderboard-container" class="hidden">
+        <h2>Daily Leaderboard</h2>
+        <ul id="daily-leaderboard"></ul>
+        <h2>Monthly Leaderboard (Sum of Scores)</h2>
+        <ul id="monthly-leaderboard-sum"></ul>
+        <h2>Monthly Leaderboard (Average Score)</h2>
+        <ul id="monthly-leaderboard-mean"></ul>
+        <button id="back-button">Back</button>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
@@ -50,4 +53,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
