@@ -7,18 +7,24 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- LOGIN SCREEN -->
     <div id="login-container">
         <h1>Wordle</h1>
         <input type="text" id="username-input" placeholder="Enter your username">
         <button id="login-button">Play</button>
-        <button id="show-leaderboard-button">Leaderboard</button>
+        <button id="view-leaderboard-from-login">Leaderboard</button>
     </div>
 
+    <!-- GAME SCREEN -->
     <div id="game-container" class="hidden">
         <div id="game-board"></div>
         <div id="keyboard-cont"></div>
+        <div class="nav-buttons">
+            <button id="view-leaderboard-from-game">Leaderboard</button>
+        </div>
     </div>
 
+    <!-- LEADERBOARD SCREEN -->
     <div id="leaderboard-container" class="hidden">
         <h2>Daily Leaderboard</h2>
         <ul id="daily-leaderboard"></ul>
@@ -26,9 +32,14 @@
         <ul id="monthly-leaderboard-sum"></ul>
         <h2>Monthly Leaderboard (Average Score)</h2>
         <ul id="monthly-leaderboard-mean"></ul>
-        <button id="back-button">Back</button>
+
+        <div class="nav-buttons">
+            <button id="back-to-login">Back to Login</button>
+            <button id="back-to-game">Back to Game</button>
+        </div>
     </div>
 
+    <!-- Firebase Scripts -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
@@ -53,4 +64,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
