@@ -158,7 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const raw = 1 / (timeTaken * Math.pow(steps, 3)); 
 			const score = Math.round(1000 * Math.log10(1 + raw * 1e6));
             saveScore(score, timeTaken, steps);
-            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
+            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(0)}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             isGameOver = true;
@@ -276,7 +276,7 @@ document.addEventListener("DOMContentLoaded", () => {
             data.sort((a, b) => b.totalScore - a.totalScore);
             const sumRows = data.slice(0, 10).map(d => [
                 d.username,
-                d.totalScore.toFixed(5),
+                d.totalScore.toFixed(0),
                 (d.totalTime || 0).toFixed(1) + "s",
                 d.totalSteps || 0
             ]);
@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const avgScore = d.totalScore / d.playCount;
                 const avgTime = d.totalTime / d.playCount;
                 const avgSteps = d.totalSteps / d.playCount;
-                return [d.username, avgScore.toFixed(5), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
+                return [d.username, avgScore.toFixed(0), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
             });
             monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
         });
@@ -385,5 +385,6 @@ document.addEventListener("DOMContentLoaded", () => {
         username = storedUsername;
     }
 });
+
 
 
