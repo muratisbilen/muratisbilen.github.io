@@ -257,7 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
             data.sort((a, b) => b.score - a.score);
             const rows = data.slice(0, 10).map(d => [
                 d.username,
-                d.score.toFixed(5),
+                d.score.toFixed(0),
                 d.time.toFixed(1) + "s",
                 d.steps
             ]);
@@ -385,4 +385,5 @@ document.addEventListener("DOMContentLoaded", () => {
         username = storedUsername;
     }
 });
+
 
