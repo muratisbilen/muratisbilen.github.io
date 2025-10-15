@@ -2,10 +2,10 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <!-- ⭐ ADDED THIS LINE: The most important step for mobile compatibility -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordle Game</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Firebase SDKs are now only at the bottom of the body -->
 </head>
     
 <body>
@@ -29,17 +29,11 @@
     <!-- LEADERBOARD SCREEN -->
     <div id="leaderboard-container" class="container hidden">
         <h2>Daily Leaderboard</h2>
-        <!-- ⭐ FIXED: Changed from <ul> to <div> -->
         <div id="daily-leaderboard"></div>
-
         <h2>Monthly Leaderboard (Sum of Scores)</h2>
-        <!-- ⭐ FIXED: Changed from <ul> to <div> -->
         <div id="monthly-leaderboard-sum"></div>
-
         <h2>Monthly Leaderboard (Average Score)</h2>
-        <!-- ⭐ FIXED: Changed from <ul> to <div> -->
         <div id="monthly-leaderboard-mean"></div>
-
         <div class="nav-buttons">
             <button id="back-to-login">Back to Login</button>
             <button id="back-to-game">Back to Game</button>
@@ -52,7 +46,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <script>
-        // Your Firebase configuration is correctly placed here.
         const firebaseConfig = {
           apiKey: "AIzaSyBuM3n3_r9o5SlJ8VSwRx-dhHf5fbAL3Sg",
           authDomain: "baydledb.firebaseapp.com",
@@ -62,14 +55,11 @@
           appId: "1:16708584389:web:61d8b684a5c512023181ac",
           measurementId: "G-H67RVJRKD7"
         };
-
-        // Initialize Firebase and make db and auth globally available to script.js
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
     </script>
     
-    <!-- Your main game script -->
     <script src="script.js"></script>
 </body>
 </html>
