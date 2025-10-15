@@ -3,13 +3,12 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100vh; /* Use min-height to handle content overflow */
+    min-height: 100vh;
     background-color: #f0f0f0;
-    padding: 20px; /* Add some padding for smaller screens */
+    padding: 20px;
     box-sizing: border-box;
 }
 
-/* --- IMPROVED: Added styling for all main containers --- */
 #login-container, #game-container, #leaderboard-container {
     text-align: center;
     background-color: white;
@@ -17,7 +16,7 @@ body {
     border-radius: 10px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     width: 100%;
-    max-width: 600px; /* Constrain width for a cleaner look */
+    max-width: 600px;
 }
 
 .hidden {
@@ -29,6 +28,7 @@ body {
     grid-template-rows: repeat(6, 1fr);
     gap: 5px;
     margin-bottom: 20px;
+    justify-content: center; /* Center the board itself */
 }
 
 .letter-row {
@@ -47,7 +47,6 @@ body {
     font-size: 2rem;
     font-weight: bold;
     text-transform: uppercase;
-    margin: 0 auto; /* Center the boxes if container is wider */
 }
 
 .green { background-color: #6aaa64; color: white; border-color: #6aaa64; }
@@ -72,21 +71,19 @@ body {
     font-weight: bold;
 }
 
-/* --- ADDED: Specific styling for keyboard colors --- */
 .key-button.green { background-color: #6aaa64; color: white; }
 .key-button.yellow { background-color: #c9b458; color: white; }
 .key-button.gray { background-color: #787c7e; color: white; }
-
 
 button {
     background-color: #4CAF50;
     color: white;
     border: none;
-    padding: 10px 18px; /* Slightly larger padding */
+    padding: 10px 18px;
     border-radius: 5px;
     cursor: pointer;
     font-size: 1rem;
-    margin: 5px; /* Add margin to space out buttons */
+    margin: 5px;
 }
 
 button:hover {
@@ -97,13 +94,12 @@ table {
     width: 100%;
     border-collapse: collapse;
     background-color: #fff;
-    /* --- IMPROVED: Add space below each leaderboard table --- */
     margin-bottom: 25px; 
 }
 
 th, td {
-    border: 1px solid #ddd; /* Lighter border color */
-    padding: 8px 10px; /* Consistent padding */
+    border: 1px solid #ddd;
+    padding: 8px 10px;
     text-align: center;
 }
 
@@ -120,4 +116,56 @@ tr:hover {
     background-color: #f1f1f1;
 }
 
-/* --- REMOVED: Incomplete rule from the end of the file --- */
+
+/* ⭐ --- START: Responsive Styles for Mobile Phones --- ⭐ */
+/* These styles will apply ONLY when the screen is 600px wide or less */
+@media (max-width: 600px) {
+
+    body {
+        padding: 10px; /* Reduce outer padding */
+    }
+
+    #login-container, #game-container, #leaderboard-container {
+        padding: 15px; /* Reduce container padding */
+        box-shadow: none; /* Simplify the look on mobile */
+        border-radius: 0;
+    }
+
+    /* Make the game board boxes scale with the screen width */
+    .letter-box {
+        /* Use viewport width (vw) for size */
+        width: 15vw;
+        height: 15vw;
+        /* Set a max size so they don't get too big on tablets */
+        max-width: 50px;
+        max-height: 50px;
+        /* Scale the font size inside the box */
+        font-size: 8vw;
+    }
+
+    /* Make the keyboard keys smaller and more compact */
+    .key-button {
+        padding: 8px 6px; /* Reduce padding */
+        font-size: 0.8rem; /* Make font slightly smaller */
+        margin: 1px;
+    }
+    
+    .keyboard-row {
+        margin-bottom: 3px;
+    }
+
+    /* Reduce heading sizes */
+    h1 {
+        font-size: 2.2rem;
+    }
+    h2 {
+        font-size: 1.3rem;
+    }
+
+    /* Make table text smaller to prevent wrapping */
+    th, td {
+        padding: 6px 4px;
+        font-size: 0.85rem;
+    }
+}
+/* ⭐ --- END: Responsive Styles for Mobile Phones --- ⭐ */
