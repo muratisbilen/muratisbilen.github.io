@@ -326,17 +326,25 @@ document.addEventListener("DOMContentLoaded", () => {
         else if (key === "backspace") handleDelete();
         else if (/^[a-zçğıöşü]$/.test(key)) handleKeyPress(key);
     });
+	
+	function seededRandom(seed) {
+		const x = Math.sin(seed) * 10000;
+		return x - Math.floor(x);
+	}
 
     async function startGame() {
         await loadWords();
         if (dictionary.length > 0) {
             const epoch = new Date("2025-01-01T00:00:00Z");
-            const now = new Date();
-            const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-            const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
-            const wordIndex = dayIndex % dictionary.length;
-            solution = dictionary[wordIndex];
-            console.log(`Today's word: ${solution}`);
+			const now = new Date();
+			const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+			const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
+
+			// Use seeded random to pick index
+			const randomValue = seededRandom(dayIndex);
+			const wordIndex = Math.floor(randomValue * dictionary.length);
+
+			solution = dictionary[wordIndex];console.log(`Today's word: ${solution}`);
             startTime = new Date();
             displayLeaderboards();
         }
@@ -376,3 +384,4 @@ document.addEventListener("DOMContentLoaded", () => {
         username = storedUsername;
     }
 });
+
