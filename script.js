@@ -95,6 +95,24 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!gameStateDoc.exists) return false;
 
         const savedState = gameStateDoc.data();
+        
+        // Crucially, check if the saved game is for today's word
+        const now = new Date();
+        const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+        const epoch = new Date("2025-01-01T00:00:00Z");
+        const currentDayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
+        const savedWordIndex = dictionary.indexOf(savedState.solution);
+        const savedDayIndex = Math.floor(seededRandom(dictionary.indexOf(savedState.solution)) * dictionary.length); // This is a bit of a guess, better to compare solution directly.
+
+        // A simpler check is just to generate today's word and see if it matches.
+        const todaysWord = dictionary[Math.floor(seededRandom(currentDayIndex) * dictionary.length)];
+
+        if (savedState.solution !== todaysWord) {
+             db.collection("gameStates").doc(username).delete(); // Stale game state, delete it
+             return false; // Do not restore
+        }
+
+
         solution = savedState.solution;
         currentRow = savedState.currentRow;
         currentCol = savedState.currentCol;
@@ -206,10 +224,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateKeyboardDisplay() {
+        // Clear all previous colors first
+        document.querySelectorAll('.key-button').forEach(btn => {
+            btn.classList.remove('green', 'yellow', 'gray');
+        });
+        // Apply new colors
         for (const letter in keyStatus) {
             const keyButton = document.querySelector(`[data-key='${letter}']`);
             if (keyButton) {
-                keyButton.className = 'key-button'; // Reset classes
                 keyButton.classList.add(keyStatus[letter]);
             }
         }
@@ -235,7 +257,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }));
     }
 
-    // ⭐ FIXED: This function is now more robust and will not crash
     function displayLeaderboards() {
         const today = new Date().toISOString().split('T')[0];
         const dailyEl = document.getElementById("daily-leaderboard");
@@ -333,19 +354,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return x - Math.floor(x);
     }
 
+    // ⭐ THIS IS THE FULLY CORRECTED FUNCTION
     async function startGame() {
         await loadWords();
         if (dictionary.length === 0) return;
+
         if (!(await restoreGameState())) {
             const epoch = new Date("2025-01-01T00:00:00Z");
-            const dayIndex = Math.floor((new Date(new Date().setUTCHours(0, 0, 0, 0)) - epoch) / (1000 * 60 * 60 * 24));
+            const now = new Date();
+            const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
+            
             const wordIndex = Math.floor(seededRandom(dayIndex) * dictionary.length);
+            
             solution = dictionary[wordIndex];
             startTime = new Date();
+            
+            keyStatus = {};
+            updateKeyboardDisplay(); 
+            
             await saveGameState();
         }
+        console.log(`Today's solution is: ${solution}`);
     }
 
+    // --- Navigation ---
     leaderboardBtnLogin.addEventListener("click", () => {
         displayLeaderboards();
         loginContainer.classList.add("hidden");
