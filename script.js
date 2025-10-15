@@ -1,46 +1,42 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // --- HTML Element Selectors ---
     const loginContainer = document.getElementById("login-container");
     const gameContainer = document.getElementById("game-container");
     const leaderboardContainer = document.getElementById("leaderboard-container");
     const usernameInput = document.getElementById("username-input");
     const loginButton = document.getElementById("login-button");
-    const gameBoard = document.getElementById("game-board");
-    const keyboardContainer = document.getElementById("keyboard-cont");
 
     const leaderboardBtnLogin = document.getElementById("view-leaderboard-from-login");
     const leaderboardBtnGame = document.getElementById("view-leaderboard-from-game");
     const backToLoginBtn = document.getElementById("back-to-login");
     const backToGameBtn = document.getElementById("back-to-game");
 
-    // --- Game State Variables ---
     let username = "";
     let startTime;
     let dictionary = [];
     let solution = "";
     let keyStatus = {};
-    let currentRow = 0;
-    let currentCol = 0;
-    let isGameOver = false;
 
-    // --- Core Functions ---
-
+    // Load words
     async function loadWords() {
         try {
             const response = await fetch('words.txt');
             if (!response.ok) throw new Error('Network response was not ok');
             const text = await response.text();
-            dictionary = text.split('\n').map(word => word.trim().toLocaleLowerCase('tr-TR')).filter(word => word.length === 5);
+            dictionary = text.split('\n')
+                .map(word => word.trim().toLocaleLowerCase('tr-TR'))
+                .filter(word => word.length === 5);
             if (dictionary.length === 0) {
-                alert("Could not load word list.");
+                alert("Could not load word list. Please check the console for errors.");
                 return;
             }
+            console.log("Word list loaded successfully.");
         } catch (error) {
             console.error('Failed to load word list:', error);
             alert("Failed to load the word list. The game cannot start.");
         }
     }
 
+    // Login
     loginButton.addEventListener("click", () => {
         const enteredUsername = usernameInput.value.trim();
         if (enteredUsername) {
@@ -53,8 +49,9 @@ document.addEventListener("DOMContentLoaded", () => {
     async function checkIfPlayedToday() {
         const today = new Date().toISOString().split('T')[0];
         const lastPlayDate = localStorage.getItem(`wordle_last_play_${username}`);
+
         if (lastPlayDate === today) {
-            alert("You have already completed the game today. Come back tomorrow!");
+            alert("You have already played today. Come back tomorrow!");
         } else {
             loginContainer.classList.add("hidden");
             gameContainer.classList.remove("hidden");
@@ -62,6 +59,8 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // Create board
+    const gameBoard = document.getElementById("game-board");
     for (let i = 0; i < 6; i++) {
         const row = document.createElement("div");
         row.className = "letter-row";
@@ -73,105 +72,57 @@ document.addEventListener("DOMContentLoaded", () => {
         gameBoard.appendChild(row);
     }
 
-    async function saveGameState() {
-        if (!username || isGameOver) return;
-        const boardState = Array.from(gameBoard.children).map(row => Array.from(row.children).map(box => box.textContent || " ").join(""));
-        const gameState = {
-            solution: solution,
-            board: boardState,
-            currentRow: currentRow,
-            currentCol: currentCol,
-            startTime: startTime.toISOString(),
-            keyStatus: keyStatus,
-            isGameOver: isGameOver,
-            lastUpdate: new Date().toISOString()
-        };
-        await db.collection("gameStates").doc(username).set(gameState);
-    }
-
-    async function restoreGameState() {
-        if (!username) return false;
-        const gameStateDoc = await db.collection("gameStates").doc(username).get();
-        if (!gameStateDoc.exists) return false;
-
-        const savedState = gameStateDoc.data();
-        
-        // Crucially, check if the saved game is for today's word
-        const now = new Date();
-        const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-        const epoch = new Date("2025-01-01T00:00:00Z");
-        const currentDayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
-        const savedWordIndex = dictionary.indexOf(savedState.solution);
-        const savedDayIndex = Math.floor(seededRandom(dictionary.indexOf(savedState.solution)) * dictionary.length); // This is a bit of a guess, better to compare solution directly.
-
-        // A simpler check is just to generate today's word and see if it matches.
-        const todaysWord = dictionary[Math.floor(seededRandom(currentDayIndex) * dictionary.length)];
-
-        if (savedState.solution !== todaysWord) {
-             db.collection("gameStates").doc(username).delete(); // Stale game state, delete it
-             return false; // Do not restore
-        }
-
-
-        solution = savedState.solution;
-        currentRow = savedState.currentRow;
-        currentCol = savedState.currentCol;
-        startTime = new Date(savedState.startTime);
-        keyStatus = savedState.keyStatus || {};
-        isGameOver = savedState.isGameOver;
-
-        for (let i = 0; i < savedState.board.length; i++) {
-            const row = gameBoard.children[i];
-            const rowContent = savedState.board[i];
-            for (let j = 0; j < rowContent.length; j++) {
-                row.children[j].textContent = rowContent[j] === " " ? "" : rowContent[j];
-            }
-        }
-        for (let i = 0; i < currentRow; i++) {
-            const guess = savedState.board[i].trim().toLocaleLowerCase('tr-TR');
-            if (guess.length === 5) applyRowColors(i, guess);
-        }
-        updateKeyboardDisplay();
-        return true;
-    }
+    let currentRow = 0;
+    let currentCol = 0;
+    let isGameOver = false;
 
     function handleKeyPress(key) {
         if (isGameOver || currentCol >= 5) return;
-        gameBoard.children[currentRow].children[currentCol].textContent = key;
+        const row = gameBoard.children[currentRow];
+        const box = row.children[currentCol];
+        box.textContent = key;
         currentCol++;
-        saveGameState();
+    }
+
+    function handleEnter() {
+        if (isGameOver) return;
+        if (currentCol === 5) {
+            const guess = getCurrentGuess();
+            if (dictionary.includes(guess)) {
+                checkGuess(guess);
+                if (!isGameOver) {
+                    currentRow++;
+                    currentCol = 0;
+                }
+            } else {
+                alert("Kelime sözlükte yok!");
+            }
+        }
     }
 
     function handleDelete() {
         if (isGameOver || currentCol === 0) return;
         currentCol--;
-        gameBoard.children[currentRow].children[currentCol].textContent = "";
-        saveGameState();
-    }
-
-    function handleEnter() {
-        if (isGameOver || currentCol !== 5) return;
-        const guess = getCurrentGuess();
-        if (dictionary.includes(guess)) {
-            checkGuess(guess);
-            if (!isGameOver) {
-                currentRow++;
-                currentCol = 0;
-                saveGameState();
-            }
-        } else {
-            alert("Kelime sözlükte yok!");
-        }
+        const row = gameBoard.children[currentRow];
+        const box = row.children[currentCol];
+        box.textContent = "";
     }
 
     function getCurrentGuess() {
-        return Array.from(gameBoard.children[currentRow].children).map(box => box.textContent).join("").toLocaleLowerCase('tr-TR');
+        let guess = "";
+        const row = gameBoard.children[currentRow];
+        for (let i = 0; i < 5; i++) {
+            guess += row.children[i].textContent;
+        }
+        return guess.toLocaleLowerCase('tr-TR');
     }
 
-    function applyRowColors(rowIndex, guess) {
-        const row = gameBoard.children[rowIndex];
+    function checkGuess(guess) {
+        const row = gameBoard.children[currentRow];
         const solutionLetters = solution.split('');
         const guessLetters = guess.split('');
+
+        // Green
         for (let i = 0; i < 5; i++) {
             if (guessLetters[i] === solutionLetters[i]) {
                 row.children[i].classList.add("green");
@@ -180,6 +131,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 guessLetters[i] = null;
             }
         }
+
+        // Yellow / Gray
         for (let i = 0; i < 5; i++) {
             if (guessLetters[i] !== null) {
                 const letterIndex = solutionLetters.indexOf(guessLetters[i]);
@@ -193,70 +146,74 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
-    }
 
-    function checkGuess(guess) {
-        applyRowColors(currentRow, guess);
         updateKeyboardDisplay();
-        const timeTaken = (new Date() - startTime) / 1000;
+
+        const endTime = new Date();
+        const timeTaken = (endTime - startTime) / 1000;
         const steps = currentRow + 1;
-        if (guess === solution || currentRow === 5) {
+
+        if (guess === solution) {
             isGameOver = true;
-            let score = 0;
-            if (guess === solution) {
-                const raw = 1 / (timeTaken * Math.pow(steps, 3));
-                score = Math.round(1000 * Math.log10(1 + raw * 1e6));
-                setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
-            } else {
-                setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
-            }
-            saveScore(score, timeTaken, guess === solution ? steps : 6);
+            const raw = 1 / (timeTaken * Math.pow(steps, 3)); 
+			const score = Math.round(1000 * Math.log10(1 + raw * 1e6));
+            saveScore(score, timeTaken, steps);
+            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
-            db.collection("gameStates").doc(username).delete();
+        } else if (currentRow === 5) {
+            isGameOver = true;
+            saveScore(0, timeTaken, 6);
+            setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
+            localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
     }
 
     function updateKeyStatus(letter, status) {
         const currentStatus = keyStatus[letter];
-        if (currentStatus !== 'green' && (currentStatus !== 'yellow' || status === 'green')) {
-            keyStatus[letter] = status;
-        }
+        if (currentStatus === 'green') return;
+        if (currentStatus === 'yellow' && status !== 'green') return;
+        keyStatus[letter] = status;
     }
 
     function updateKeyboardDisplay() {
-        // Clear all previous colors first
-        document.querySelectorAll('.key-button').forEach(btn => {
-            btn.classList.remove('green', 'yellow', 'gray');
-        });
-        // Apply new colors
         for (const letter in keyStatus) {
             const keyButton = document.querySelector(`[data-key='${letter}']`);
             if (keyButton) {
+                keyButton.classList.remove('green', 'yellow', 'gray');
                 keyButton.classList.add(keyStatus[letter]);
             }
         }
     }
 
+    // Save score
     function saveScore(score, time, steps) {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
         db.collection("dailyScores").add({ username, score, date: today, time, steps });
+
         const userMonthlyDocRef = db.collection("monthlyScores").doc(`${username}_${month}`);
-        db.runTransaction(transaction => transaction.get(userMonthlyDocRef).then(doc => {
-            if (!doc.exists) {
-                transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
-            } else {
-                const data = doc.data();
-                transaction.update(userMonthlyDocRef, {
-                    totalScore: data.totalScore + score,
-                    playCount: data.playCount + 1,
-                    totalTime: (data.totalTime || 0) + time,
-                    totalSteps: (data.totalSteps || 0) + steps
-                });
-            }
-        }));
+        db.runTransaction((transaction) => {
+            return transaction.get(userMonthlyDocRef).then((doc) => {
+                if (!doc.exists) {
+                    transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
+                } else {
+                    const newTotalScore = doc.data().totalScore + score;
+                    const newPlayCount = doc.data().playCount + 1;
+                    const newTotalTime = (doc.data().totalTime || 0) + time;
+                    const newTotalSteps = (doc.data().totalSteps || 0) + steps;
+                    transaction.update(userMonthlyDocRef, { 
+                        totalScore: newTotalScore, 
+                        playCount: newPlayCount,
+                        totalTime: newTotalTime,
+                        totalSteps: newTotalSteps
+                    });
+                }
+            });
+        });
+        displayLeaderboards();
     }
 
+    // 🏆 Leaderboard (table version, client-side sorting for daily)
     function displayLeaderboards() {
         const today = new Date().toISOString().split('T')[0];
         const dailyEl = document.getElementById("daily-leaderboard");
@@ -274,6 +231,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             thead.appendChild(headRow);
             table.appendChild(thead);
+
             const tbody = document.createElement("tbody");
             rows.forEach((r, i) => {
                 const tr = document.createElement("tr");
@@ -291,38 +249,59 @@ document.addEventListener("DOMContentLoaded", () => {
             return table;
         }
 
-        if (dailyEl) {
-            db.collection("dailyScores").where("date", "==", today).get().then(qs => {
-                dailyEl.innerHTML = "";
-                const data = qs.docs.map(doc => doc.data()).sort((a, b) => b.score - a.score);
-                const rows = data.slice(0, 10).map(d => [d.username, d.score.toFixed(5), d.time.toFixed(1) + "s", d.steps]);
-                dailyEl.appendChild(buildTable(["#", "Username", "Score", "Time", "Steps"], rows));
-            });
-        }
+        // DAILY leaderboard (client-side sort)
+        db.collection("dailyScores").where("date", "==", today).get().then((qs) => {
+            dailyEl.innerHTML = "";
+            const data = [];
+            qs.forEach(doc => data.push(doc.data()));
+            data.sort((a, b) => b.score - a.score);
+            const rows = data.slice(0, 10).map(d => [
+                d.username,
+                d.score.toFixed(5),
+                d.time.toFixed(1) + "s",
+                d.steps
+            ]);
+            dailyEl.appendChild(buildTable(["#", "Username", "Score", "Time", "Steps"], rows));
+        });
 
+        // MONTHLY leaderboard
         const month = new Date().toISOString().slice(0, 7);
-        db.collection("monthlyScores").where("month", "==", month).get().then(qs => {
-            const data = qs.docs.map(doc => doc.data());
-            if (monthlySumEl) {
-                monthlySumEl.innerHTML = "";
-                data.sort((a, b) => b.totalScore - a.totalScore);
-                const sumRows = data.slice(0, 10).map(d => [d.username, d.totalScore.toFixed(5), (d.totalTime || 0).toFixed(1) + "s", d.totalSteps || 0]);
-                monthlySumEl.appendChild(buildTable(["#", "Username", "Total Score", "Total Time", "Total Steps"], sumRows));
-            }
-            if (monthlyMeanEl) {
-                monthlyMeanEl.innerHTML = "";
-                data.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
-                const meanRows = data.slice(0, 10).map(d => [d.username, (d.totalScore / d.playCount).toFixed(5), (d.totalTime / d.playCount).toFixed(1) + "s", (d.totalSteps / d.playCount).toFixed(1)]);
-                monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
-            }
+        db.collection("monthlyScores").where("month", "==", month).get().then((qs) => {
+            monthlySumEl.innerHTML = "";
+            monthlyMeanEl.innerHTML = "";
+            const data = [];
+            qs.forEach(doc => data.push(doc.data()));
+
+            // SUM Leaderboard
+            data.sort((a, b) => b.totalScore - a.totalScore);
+            const sumRows = data.slice(0, 10).map(d => [
+                d.username,
+                d.totalScore.toFixed(5),
+                (d.totalTime || 0).toFixed(1) + "s",
+                d.totalSteps || 0
+            ]);
+            monthlySumEl.appendChild(buildTable(["#", "Username", "Total Score", "Total Time", "Total Steps"], sumRows));
+
+            // MEAN Leaderboard
+            data.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
+            const meanRows = data.slice(0, 10).map(d => {
+                const avgScore = d.totalScore / d.playCount;
+                const avgTime = d.totalTime / d.playCount;
+                const avgSteps = d.totalSteps / d.playCount;
+                return [d.username, avgScore.toFixed(5), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
+            });
+            monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
         });
     }
 
+    // Keyboard
     const keyboard = [
-        ["e", "r", "t", "y", "u", "ı", "o", "p", "ğ", "ü"],
-        ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ş", "i"],
-        ["enter", "z", "c", "v", "b", "n", "m", "ö", "ç", "del"]
+        ["e","r","t","y","u","ı","o","p","ğ","ü"],
+        ["a","s","d","f","g","h","j","k","l","ş","i"],
+        ["enter","z","c","v","b","n","m","ö","ç","del"]
     ];
+
+    const keyboardContainer = document.getElementById("keyboard-cont");
     keyboard.forEach(row => {
         const rowDiv = document.createElement("div");
         rowDiv.className = "keyboard-row";
@@ -341,56 +320,50 @@ document.addEventListener("DOMContentLoaded", () => {
         keyboardContainer.appendChild(rowDiv);
     });
 
-    document.addEventListener("keydown", e => {
+    document.addEventListener("keydown", (event) => {
         if (document.activeElement === usernameInput) return;
-        const key = e.key.toLocaleLowerCase('tr-TR');
+        const key = event.key.toLocaleLowerCase('tr-TR');
         if (key === "enter") handleEnter();
         else if (key === "backspace") handleDelete();
         else if (/^[a-zçğıöşü]$/.test(key)) handleKeyPress(key);
     });
+	
+	function seededRandom(seed) {
+		const x = Math.sin(seed) * 10000;
+		return x - Math.floor(x);
+	}
 
-    function seededRandom(seed) {
-        const x = Math.sin(seed) * 10000;
-        return x - Math.floor(x);
-    }
-
-    // ⭐ THIS IS THE FULLY CORRECTED FUNCTION
     async function startGame() {
         await loadWords();
-        if (dictionary.length === 0) return;
-
-        if (!(await restoreGameState())) {
+        if (dictionary.length > 0) {
             const epoch = new Date("2025-01-01T00:00:00Z");
-            const now = new Date();
-            const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-            const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
-            
-            const wordIndex = Math.floor(seededRandom(dayIndex) * dictionary.length);
-            
-            solution = dictionary[wordIndex];
+			const now = new Date();
+			const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+			const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
+
+			// Use seeded random to pick index
+			const randomValue = seededRandom(dayIndex);
+			const wordIndex = Math.floor(randomValue * dictionary.length);
+
+			solution = dictionary[wordIndex];console.log(`Today's word: ${solution}`);
             startTime = new Date();
-            
-            keyStatus = {};
-            updateKeyboardDisplay(); 
-            
-            await saveGameState();
+            displayLeaderboards();
         }
-        console.log(`Today's solution is: ${solution}`);
     }
 
-    // --- Navigation ---
+    // Navigation
     leaderboardBtnLogin.addEventListener("click", () => {
-        displayLeaderboards();
         loginContainer.classList.add("hidden");
         leaderboardContainer.classList.remove("hidden");
+        displayLeaderboards();
         backToLoginBtn.style.display = "inline-block";
         backToGameBtn.style.display = "none";
     });
 
     leaderboardBtnGame.addEventListener("click", () => {
-        displayLeaderboards();
         gameContainer.classList.add("hidden");
         leaderboardContainer.classList.remove("hidden");
+        displayLeaderboards();
         backToLoginBtn.style.display = "none";
         backToGameBtn.style.display = "inline-block";
     });
@@ -405,9 +378,11 @@ document.addEventListener("DOMContentLoaded", () => {
         gameContainer.classList.remove("hidden");
     });
 
+    // Restore username
     const storedUsername = localStorage.getItem("wordle_username");
     if (storedUsername) {
         usernameInput.value = storedUsername;
         username = storedUsername;
     }
 });
+
