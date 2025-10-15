@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wordle Game</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <!-- Firebase SDKs are now only at the bottom of the body -->
 </head>
     
 <body>
     <!-- LOGIN SCREEN -->
-    <div id="login-container">
+    <div id="login-container" class="container">
         <h1>Wordle</h1>
         <input type="text" id="username-input" placeholder="Enter your username">
         <button id="login-button">Play</button>
@@ -19,7 +18,7 @@
     </div>
 
     <!-- GAME SCREEN -->
-    <div id="game-container" class="hidden">
+    <div id="game-container" class="container hidden">
         <div id="game-board"></div>
         <div id="keyboard-cont"></div>
         <div class="nav-buttons">
@@ -28,13 +27,18 @@
     </div>
 
     <!-- LEADERBOARD SCREEN -->
-    <div id="leaderboard-container" class="hidden">
+    <div id="leaderboard-container" class="container hidden">
         <h2>Daily Leaderboard</h2>
-        <ul id="daily-leaderboard"></ul>
+        <!-- ⭐ FIXED: Changed from <ul> to <div> -->
+        <div id="daily-leaderboard"></div>
+
         <h2>Monthly Leaderboard (Sum of Scores)</h2>
-        <ul id="monthly-leaderboard-sum"></ul>
+        <!-- ⭐ FIXED: Changed from <ul> to <div> -->
+        <div id="monthly-leaderboard-sum"></div>
+
         <h2>Monthly Leaderboard (Average Score)</h2>
-        <ul id="monthly-leaderboard-mean"></ul>
+        <!-- ⭐ FIXED: Changed from <ul> to <div> -->
+        <div id="monthly-leaderboard-mean"></div>
 
         <div class="nav-buttons">
             <button id="back-to-login">Back to Login</button>
@@ -43,12 +47,12 @@
     </div>
 
     <!-- Firebase Scripts -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 
     <script>
-        // PASTE YOUR FIREBASE CONFIGURATION HERE
+        // Your Firebase configuration is correctly placed here.
         const firebaseConfig = {
           apiKey: "AIzaSyBuM3n3_r9o5SlJ8VSwRx-dhHf5fbAL3Sg",
           authDomain: "baydledb.firebaseapp.com",
@@ -59,12 +63,13 @@
           measurementId: "G-H67RVJRKD7"
         };
 
-        // Initialize Firebase
+        // Initialize Firebase and make db and auth globally available to script.js
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
     </script>
+    
+    <!-- Your main game script -->
     <script src="script.js"></script>
 </body>
 </html>
-
