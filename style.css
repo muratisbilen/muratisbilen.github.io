@@ -3,12 +3,21 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    min-height: 100vh; /* Use min-height to handle content overflow */
     background-color: #f0f0f0;
+    padding: 20px; /* Add some padding for smaller screens */
+    box-sizing: border-box;
 }
 
+/* --- IMPROVED: Added styling for all main containers --- */
 #login-container, #game-container, #leaderboard-container {
     text-align: center;
+    background-color: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 600px; /* Constrain width for a cleaner look */
 }
 
 .hidden {
@@ -38,11 +47,12 @@ body {
     font-size: 2rem;
     font-weight: bold;
     text-transform: uppercase;
+    margin: 0 auto; /* Center the boxes if container is wider */
 }
 
-.green { background-color: #6aaa64; color: white; }
-.yellow { background-color: #c9b458; color: white; }
-.gray { background-color: #787c7e; color: white; }
+.green { background-color: #6aaa64; color: white; border-color: #6aaa64; }
+.yellow { background-color: #c9b458; color: white; border-color: #c9b458; }
+.gray { background-color: #787c7e; color: white; border-color: #787c7e; }
 
 #keyboard-cont { margin-top: 20px; }
 
@@ -58,15 +68,25 @@ body {
     border-radius: 5px;
     border: 1px solid #ccc;
     cursor: pointer;
+    background-color: #e0e0e0;
+    font-weight: bold;
 }
+
+/* --- ADDED: Specific styling for keyboard colors --- */
+.key-button.green { background-color: #6aaa64; color: white; }
+.key-button.yellow { background-color: #c9b458; color: white; }
+.key-button.gray { background-color: #787c7e; color: white; }
+
 
 button {
     background-color: #4CAF50;
     color: white;
     border: none;
-    padding: 8px 12px;
+    padding: 10px 18px; /* Slightly larger padding */
     border-radius: 5px;
     cursor: pointer;
+    font-size: 1rem;
+    margin: 5px; /* Add margin to space out buttons */
 }
 
 button:hover {
@@ -75,15 +95,15 @@ button:hover {
 
 table {
     width: 100%;
-    max-width: 600px;
-    margin: 10px auto;
     border-collapse: collapse;
     background-color: #fff;
+    /* --- IMPROVED: Add space below each leaderboard table --- */
+    margin-bottom: 25px; 
 }
 
 th, td {
-    border: 1px solid #ccc;
-    padding: 6px 8px;
+    border: 1px solid #ddd; /* Lighter border color */
+    padding: 8px 10px; /* Consistent padding */
     text-align: center;
 }
 
@@ -97,9 +117,7 @@ tr:nth-child(even) {
 }
 
 tr:hover {
-    background-color: #eef;
+    background-color: #f1f1f1;
 }
 
-
-#leaderboard
-
+/* --- REMOVED: Incomplete rule from the end of the file --- */
