@@ -13,19 +13,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const backToLoginBtn = document.getElementById("back-to-login");
     const backToGameBtn = document.getElementById("back-to-game");
 
-    // --- Firebase Initialization ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyBuM3n3_r9o5SlJ8VSwRx-dhHf5fbAL3Sg",
-      authDomain: "baydledb.firebaseapp.com",
-      projectId: "baydledb",
-      storageBucket: "baydledb.firebasestorage.app",
-      messagingSenderId: "16708584389",
-      appId: "1:16708584389:web:61d8b684a5c512023181ac",
-      measurementId: "G-H67RVJRKD7"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
     // --- Game State Variables ---
     let username = "";
     let startTime;
@@ -38,27 +25,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Core Functions ---
 
-    // Load words from the text file
     async function loadWords() {
         try {
             const response = await fetch('words.txt');
             if (!response.ok) throw new Error('Network response was not ok');
             const text = await response.text();
-            dictionary = text.split('\n')
-                .map(word => word.trim().toLocaleLowerCase('tr-TR'))
-                .filter(word => word.length === 5);
+            dictionary = text.split('\n').map(word => word.trim().toLocaleLowerCase('tr-TR')).filter(word => word.length === 5);
             if (dictionary.length === 0) {
-                alert("Could not load word list. Please check the console for errors.");
+                alert("Could not load word list.");
                 return;
             }
-            console.log("Word list loaded successfully.");
         } catch (error) {
             console.error('Failed to load word list:', error);
             alert("Failed to load the word list. The game cannot start.");
         }
     }
 
-    // Handle user login
     loginButton.addEventListener("click", () => {
         const enteredUsername = usernameInput.value.trim();
         if (enteredUsername) {
@@ -68,11 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Check if the user has already completed the game today
     async function checkIfPlayedToday() {
         const today = new Date().toISOString().split('T')[0];
         const lastPlayDate = localStorage.getItem(`wordle_last_play_${username}`);
-
         if (lastPlayDate === today) {
             alert("You have already completed the game today. Come back tomorrow!");
         } else {
@@ -82,7 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // Dynamically create the game board
     for (let i = 0; i < 6; i++) {
         const row = document.createElement("div");
         row.className = "letter-row";
@@ -94,14 +73,9 @@ document.addEventListener("DOMContentLoaded", () => {
         gameBoard.appendChild(row);
     }
 
-    // ⭐ 1. SAVE GAME STATE TO FIREBASE
     async function saveGameState() {
         if (!username || isGameOver) return;
-
-        const boardState = Array.from(gameBoard.children).map(row =>
-            Array.from(row.children).map(box => box.textContent || " ").join("")
-        );
-
+        const boardState = Array.from(gameBoard.children).map(row => Array.from(row.children).map(box => box.textContent || " ").join(""));
         const gameState = {
             solution: solution,
             board: boardState,
@@ -112,19 +86,13 @@ document.addEventListener("DOMContentLoaded", () => {
             isGameOver: isGameOver,
             lastUpdate: new Date().toISOString()
         };
-        // Use the username as the document ID for easy lookup
         await db.collection("gameStates").doc(username).set(gameState);
     }
 
-    // ⭐ 2. RESTORE GAME STATE FROM FIREBASE
     async function restoreGameState() {
         if (!username) return false;
-
         const gameStateDoc = await db.collection("gameStates").doc(username).get();
-        if (!gameStateDoc.exists) {
-            console.log("No saved game state found in Firebase.");
-            return false;
-        }
+        if (!gameStateDoc.exists) return false;
 
         const savedState = gameStateDoc.data();
         solution = savedState.solution;
@@ -141,25 +109,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 row.children[j].textContent = rowContent[j] === " " ? "" : rowContent[j];
             }
         }
-        
         for (let i = 0; i < currentRow; i++) {
             const guess = savedState.board[i].trim().toLocaleLowerCase('tr-TR');
-            if (guess.length === 5) {
-                applyRowColors(i, guess);
-            }
+            if (guess.length === 5) applyRowColors(i, guess);
         }
-
         updateKeyboardDisplay();
-        console.log("Game state restored from Firebase.");
         return true;
     }
-    
-    // ⭐ 3. EVENT HANDLERS MODIFIED TO SAVE STATE
+
     function handleKeyPress(key) {
         if (isGameOver || currentCol >= 5) return;
-        const row = gameBoard.children[currentRow];
-        const box = row.children[currentCol];
-        box.textContent = key;
+        gameBoard.children[currentRow].children[currentCol].textContent = key;
         currentCol++;
         saveGameState();
     }
@@ -167,45 +127,33 @@ document.addEventListener("DOMContentLoaded", () => {
     function handleDelete() {
         if (isGameOver || currentCol === 0) return;
         currentCol--;
-        const row = gameBoard.children[currentRow];
-        const box = row.children[currentCol];
-        box.textContent = "";
+        gameBoard.children[currentRow].children[currentCol].textContent = "";
         saveGameState();
     }
 
     function handleEnter() {
-        if (isGameOver) return;
-        if (currentCol === 5) {
-            const guess = getCurrentGuess();
-            if (dictionary.includes(guess)) {
-                checkGuess(guess);
-                if (!isGameOver) {
-                    currentRow++;
-                    currentCol = 0;
-                    saveGameState();
-                }
-            } else {
-                alert("Kelime sözlükte yok!");
+        if (isGameOver || currentCol !== 5) return;
+        const guess = getCurrentGuess();
+        if (dictionary.includes(guess)) {
+            checkGuess(guess);
+            if (!isGameOver) {
+                currentRow++;
+                currentCol = 0;
+                saveGameState();
             }
+        } else {
+            alert("Kelime sözlükte yok!");
         }
     }
 
     function getCurrentGuess() {
-        let guess = "";
-        const row = gameBoard.children[currentRow];
-        for (let i = 0; i < 5; i++) {
-            guess += row.children[i].textContent;
-        }
-        return guess.toLocaleLowerCase('tr-TR');
+        return Array.from(gameBoard.children[currentRow].children).map(box => box.textContent).join("").toLocaleLowerCase('tr-TR');
     }
 
-    // Helper function to apply colors to a row, used for both checking and restoring
     function applyRowColors(rowIndex, guess) {
         const row = gameBoard.children[rowIndex];
         const solutionLetters = solution.split('');
         const guessLetters = guess.split('');
-
-        // Green pass
         for (let i = 0; i < 5; i++) {
             if (guessLetters[i] === solutionLetters[i]) {
                 row.children[i].classList.add("green");
@@ -214,8 +162,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 guessLetters[i] = null;
             }
         }
-
-        // Yellow/Gray pass
         for (let i = 0; i < 5; i++) {
             if (guessLetters[i] !== null) {
                 const letterIndex = solutionLetters.indexOf(guessLetters[i]);
@@ -230,20 +176,15 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
     }
-    
-    // ⭐ 4. CHECK GUESS LOGIC MODIFIED FOR CLEANUP
+
     function checkGuess(guess) {
         applyRowColors(currentRow, guess);
         updateKeyboardDisplay();
-
-        const endTime = new Date();
-        const timeTaken = (endTime - startTime) / 1000;
+        const timeTaken = (new Date() - startTime) / 1000;
         const steps = currentRow + 1;
-
         if (guess === solution || currentRow === 5) {
             isGameOver = true;
             let score = 0;
-
             if (guess === solution) {
                 const raw = 1 / (timeTaken * Math.pow(steps, 3));
                 score = Math.round(1000 * Math.log10(1 + raw * 1e6));
@@ -251,31 +192,24 @@ document.addEventListener("DOMContentLoaded", () => {
             } else {
                 setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
             }
-
             saveScore(score, timeTaken, guess === solution ? steps : 6);
-            
-            // Mark today's game as completed
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
-            
-            // Delete the in-progress game state from Firebase
-            db.collection("gameStates").doc(username).delete().then(() => {
-                console.log("Game state deleted from Firebase.");
-            });
+            db.collection("gameStates").doc(username).delete();
         }
     }
 
     function updateKeyStatus(letter, status) {
         const currentStatus = keyStatus[letter];
-        if (currentStatus === 'green') return;
-        if (currentStatus === 'yellow' && status !== 'green') return;
-        keyStatus[letter] = status;
+        if (currentStatus !== 'green' && (currentStatus !== 'yellow' || status === 'green')) {
+            keyStatus[letter] = status;
+        }
     }
 
     function updateKeyboardDisplay() {
         for (const letter in keyStatus) {
             const keyButton = document.querySelector(`[data-key='${letter}']`);
             if (keyButton) {
-                keyButton.classList.remove('green', 'yellow', 'gray');
+                keyButton.className = 'key-button'; // Reset classes
                 keyButton.classList.add(keyStatus[letter]);
             }
         }
@@ -285,40 +219,89 @@ document.addEventListener("DOMContentLoaded", () => {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
         db.collection("dailyScores").add({ username, score, date: today, time, steps });
-
         const userMonthlyDocRef = db.collection("monthlyScores").doc(`${username}_${month}`);
-        db.runTransaction((transaction) => {
-            return transaction.get(userMonthlyDocRef).then((doc) => {
-                if (!doc.exists) {
-                    transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
-                } else {
-                    const newTotalScore = doc.data().totalScore + score;
-                    const newPlayCount = doc.data().playCount + 1;
-                    const newTotalTime = (doc.data().totalTime || 0) + time;
-                    const newTotalSteps = (doc.data().totalSteps || 0) + steps;
-                    transaction.update(userMonthlyDocRef, { 
-                        totalScore: newTotalScore, 
-                        playCount: newPlayCount,
-                        totalTime: newTotalTime,
-                        totalSteps: newTotalSteps
-                    });
-                }
-            });
-        });
-        displayLeaderboards();
+        db.runTransaction(transaction => transaction.get(userMonthlyDocRef).then(doc => {
+            if (!doc.exists) {
+                transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
+            } else {
+                const data = doc.data();
+                transaction.update(userMonthlyDocRef, {
+                    totalScore: data.totalScore + score,
+                    playCount: data.playCount + 1,
+                    totalTime: (data.totalTime || 0) + time,
+                    totalSteps: (data.totalSteps || 0) + steps
+                });
+            }
+        }));
     }
 
+    // ⭐ FIXED: This function is now more robust and will not crash
     function displayLeaderboards() {
-        // This function is unchanged
-        // ... (your existing leaderboard code)
+        const today = new Date().toISOString().split('T')[0];
+        const dailyEl = document.getElementById("daily-leaderboard");
+        const monthlySumEl = document.getElementById("monthly-leaderboard-sum");
+        const monthlyMeanEl = document.getElementById("monthly-leaderboard-mean");
+
+        function buildTable(headers, rows) {
+            const table = document.createElement("table");
+            const thead = document.createElement("thead");
+            const headRow = document.createElement("tr");
+            headers.forEach(h => {
+                const th = document.createElement("th");
+                th.textContent = h;
+                headRow.appendChild(th);
+            });
+            thead.appendChild(headRow);
+            table.appendChild(thead);
+            const tbody = document.createElement("tbody");
+            rows.forEach((r, i) => {
+                const tr = document.createElement("tr");
+                const rankCell = document.createElement("td");
+                rankCell.textContent = i + 1;
+                tr.appendChild(rankCell);
+                r.forEach(cell => {
+                    const td = document.createElement("td");
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            return table;
+        }
+
+        if (dailyEl) {
+            db.collection("dailyScores").where("date", "==", today).get().then(qs => {
+                dailyEl.innerHTML = "";
+                const data = qs.docs.map(doc => doc.data()).sort((a, b) => b.score - a.score);
+                const rows = data.slice(0, 10).map(d => [d.username, d.score.toFixed(5), d.time.toFixed(1) + "s", d.steps]);
+                dailyEl.appendChild(buildTable(["#", "Username", "Score", "Time", "Steps"], rows));
+            });
+        }
+
+        const month = new Date().toISOString().slice(0, 7);
+        db.collection("monthlyScores").where("month", "==", month).get().then(qs => {
+            const data = qs.docs.map(doc => doc.data());
+            if (monthlySumEl) {
+                monthlySumEl.innerHTML = "";
+                data.sort((a, b) => b.totalScore - a.totalScore);
+                const sumRows = data.slice(0, 10).map(d => [d.username, d.totalScore.toFixed(5), (d.totalTime || 0).toFixed(1) + "s", d.totalSteps || 0]);
+                monthlySumEl.appendChild(buildTable(["#", "Username", "Total Score", "Total Time", "Total Steps"], sumRows));
+            }
+            if (monthlyMeanEl) {
+                monthlyMeanEl.innerHTML = "";
+                data.sort((a, b) => (b.totalScore / b.playCount) - (a.totalScore / a.playCount));
+                const meanRows = data.slice(0, 10).map(d => [d.username, (d.totalScore / d.playCount).toFixed(5), (d.totalTime / d.playCount).toFixed(1) + "s", (d.totalSteps / d.playCount).toFixed(1)]);
+                monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
+            }
+        });
     }
 
     const keyboard = [
-        ["e","r","t","y","u","ı","o","p","ğ","ü"],
-        ["a","s","d","f","g","h","j","k","l","ş","i"],
-        ["enter","z","c","v","b","n","m","ö","ç","del"]
+        ["e", "r", "t", "y", "u", "ı", "o", "p", "ğ", "ü"],
+        ["a", "s", "d", "f", "g", "h", "j", "k", "l", "ş", "i"],
+        ["enter", "z", "c", "v", "b", "n", "m", "ö", "ç", "del"]
     ];
-
     keyboard.forEach(row => {
         const rowDiv = document.createElement("div");
         rowDiv.className = "keyboard-row";
@@ -337,58 +320,44 @@ document.addEventListener("DOMContentLoaded", () => {
         keyboardContainer.appendChild(rowDiv);
     });
 
-    document.addEventListener("keydown", (event) => {
+    document.addEventListener("keydown", e => {
         if (document.activeElement === usernameInput) return;
-        const key = event.key.toLocaleLowerCase('tr-TR');
+        const key = e.key.toLocaleLowerCase('tr-TR');
         if (key === "enter") handleEnter();
         else if (key === "backspace") handleDelete();
         else if (/^[a-zçğıöşü]$/.test(key)) handleKeyPress(key);
     });
-	
-	function seededRandom(seed) {
-		const x = Math.sin(seed) * 10000;
-		return x - Math.floor(x);
-	}
 
-    // ⭐ 5. STARTGAME MODIFIED TO RESTORE OR INITIALIZE
+    function seededRandom(seed) {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+    }
+
     async function startGame() {
         await loadWords();
         if (dictionary.length === 0) return;
-
-        const restored = await restoreGameState();
-
-        if (!restored) {
-            // If no state, start a new game
+        if (!(await restoreGameState())) {
             const epoch = new Date("2025-01-01T00:00:00Z");
-            const now = new Date();
-            const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-            const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
-
-            const randomValue = seededRandom(dayIndex);
-            const wordIndex = Math.floor(randomValue * dictionary.length);
-
+            const dayIndex = Math.floor((new Date(new Date().setUTCHours(0, 0, 0, 0)) - epoch) / (1000 * 60 * 60 * 24));
+            const wordIndex = Math.floor(seededRandom(dayIndex) * dictionary.length);
             solution = dictionary[wordIndex];
             startTime = new Date();
-            // Save the initial state of the new game
             await saveGameState();
         }
-        console.log(`Today's word: ${solution}`);
-        displayLeaderboards();
     }
 
-    // --- Navigation ---
     leaderboardBtnLogin.addEventListener("click", () => {
+        displayLeaderboards();
         loginContainer.classList.add("hidden");
         leaderboardContainer.classList.remove("hidden");
-        displayLeaderboards();
         backToLoginBtn.style.display = "inline-block";
         backToGameBtn.style.display = "none";
     });
 
     leaderboardBtnGame.addEventListener("click", () => {
+        displayLeaderboards();
         gameContainer.classList.add("hidden");
         leaderboardContainer.classList.remove("hidden");
-        displayLeaderboards();
         backToLoginBtn.style.display = "none";
         backToGameBtn.style.display = "inline-block";
     });
@@ -403,7 +372,6 @@ document.addEventListener("DOMContentLoaded", () => {
         gameContainer.classList.remove("hidden");
     });
 
-    // Restore username on page load
     const storedUsername = localStorage.getItem("wordle_username");
     if (storedUsername) {
         usernameInput.value = storedUsername;
