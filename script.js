@@ -155,7 +155,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (guess === solution) {
             isGameOver = true;
-            const score = (1 / timeTaken) * (1 / Math.pow(steps, 3));
+            const raw = 1 / (timeTaken * Math.pow(steps, 3));
+			const score = Math.round(1000 * Math.log10(1 + raw * 1e6));
             saveScore(score, timeTaken, steps);
             setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(5)}`), 100);
             localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
