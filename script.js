@@ -48,32 +48,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function checkIfPlayedToday() {
         const today = new Date().toISOString().split('T')[0];
-        
-        try {
-            // Check Firebase dailyScores collection for today's play
-            const querySnapshot = await db.collection("dailyScores")
-                .where("username", "==", username)
-                .where("date", "==", today)
-                .get();
+        const lastPlayDate = localStorage.getItem(`wordle_last_play_${username}`);
 
-            if (!querySnapshot.empty) {
-                alert("You have already played today. Come back tomorrow!");
-            } else {
-                loginContainer.classList.add("hidden");
-                gameContainer.classList.remove("hidden");
-                await startGame();
-            }
-        } catch (error) {
-            console.error("Error checking play status:", error);
-            // If there's an error with Firebase, fall back to local storage check
-            const lastPlayDate = localStorage.getItem(`wordle_last_play_${username}`);
-            if (lastPlayDate === today) {
-                alert("You have already played today. Come back tomorrow!");
-            } else {
-                loginContainer.classList.add("hidden");
-                gameContainer.classList.remove("hidden");
-                await startGame();
-            }
+        if (lastPlayDate === today) {
+            alert("You have already played today. Come back tomorrow!");
+        } else {
+            loginContainer.classList.add("hidden");
+            gameContainer.classList.remove("hidden");
+            await startGame();
         }
     }
 
@@ -174,39 +156,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (guess === solution) {
             isGameOver = true;
             const raw = 1 / (timeTaken * Math.pow(steps, 3)); 
-            const score = Math.round(1000 * Math.log10(1 + raw * 1e6));
-            
-            // Double-check that user hasn't already played today before saving score
-            const today = new Date().toISOString().split('T')[0];
-            const existingPlay = await db.collection("dailyScores")
-                .where("username", "==", username)
-                .where("date", "==", today)
-                .get();
-                
-            if (existingPlay.empty) {
-                saveScore(score, timeTaken, steps);
-                localStorage.setItem(`wordle_last_play_${username}`, today);
-                setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(0)}`), 100);
-            } else {
-                setTimeout(() => alert("You have already played today! Score not saved."), 100);
-            }
+			const score = Math.round(1000 * Math.log10(1 + raw * 1e6));
+            saveScore(score, timeTaken, steps);
+            setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(0)}`), 100);
+            localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             isGameOver = true;
-            
-            // Double-check that user hasn't already played today before saving score
-            const today = new Date().toISOString().split('T')[0];
-            const existingPlay = await db.collection("dailyScores")
-                .where("username", "==", username)
-                .where("date", "==", today)
-                .get();
-                
-            if (existingPlay.empty) {
-                saveScore(0, timeTaken, 6);
-                localStorage.setItem(`wordle_last_play_${username}`, today);
-                setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
-            } else {
-                setTimeout(() => alert("You have already played today! Score not saved."), 100);
-            }
+            saveScore(0, timeTaken, 6);
+            setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
+            localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
         }
     }
 
@@ -228,43 +186,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Save score
-    async function saveScore(score, time, steps) {
+    function saveScore(score, time, steps) {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
-        
-        // Final verification before saving
-        const finalCheck = await db.collection("dailyScores")
-            .where("username", "==", username)
-            .where("date", "==", today)
-            .get();
-            
-        if (!finalCheck.empty) {
-            console.log("User already played today - score not saved");
-            return;
-        }
-        
-        // Save daily score
-        await db.collection("dailyScores").add({ 
-            username, 
-            score, 
-            date: today, 
-            time, 
-            steps 
-        });
+        db.collection("dailyScores").add({ username, score, date: today, time, steps });
 
-        // Update monthly score
         const userMonthlyDocRef = db.collection("monthlyScores").doc(`${username}_${month}`);
-        await db.runTransaction((transaction) => {
+        db.runTransaction((transaction) => {
             return transaction.get(userMonthlyDocRef).then((doc) => {
                 if (!doc.exists) {
-                    transaction.set(userMonthlyDocRef, { 
-                        username, 
-                        month, 
-                        totalScore: score, 
-                        playCount: 1, 
-                        totalTime: time, 
-                        totalSteps: steps 
-                    });
+                    transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
                 } else {
                     const newTotalScore = doc.data().totalScore + score;
                     const newPlayCount = doc.data().playCount + 1;
@@ -279,7 +210,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
         });
-        
         displayLeaderboards();
     }
 
@@ -397,26 +327,25 @@ document.addEventListener("DOMContentLoaded", () => {
         else if (key === "backspace") handleDelete();
         else if (/^[a-zçğıöşü]$/.test(key)) handleKeyPress(key);
     });
-    
-    function seededRandom(seed) {
-        const x = Math.sin(seed) * 10000;
-        return x - Math.floor(x);
-    }
+	
+	function seededRandom(seed) {
+		const x = Math.sin(seed) * 10000;
+		return x - Math.floor(x);
+	}
 
     async function startGame() {
         await loadWords();
         if (dictionary.length > 0) {
             const epoch = new Date("2025-01-01T00:00:00Z");
-            const now = new Date();
-            const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-            const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
+			const now = new Date();
+			const startOfTodayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+			const dayIndex = Math.floor((startOfTodayUTC - epoch) / (1000 * 60 * 60 * 24));
 
-            // Use seeded random to pick index
-            const randomValue = seededRandom(dayIndex);
-            const wordIndex = Math.floor(randomValue * dictionary.length);
+			// Use seeded random to pick index
+			const randomValue = seededRandom(dayIndex);
+			const wordIndex = Math.floor(randomValue * dictionary.length);
 
-            solution = dictionary[wordIndex];
-            console.log(`Today's word: ${solution}`);
+			solution = dictionary[wordIndex];console.log(`Today's word: ${solution}`);
             startTime = new Date();
             displayLeaderboards();
         }
