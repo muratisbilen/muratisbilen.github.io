@@ -38,17 +38,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Login
     loginButton.addEventListener("click", () => {
-        const enteredUsername = usernameInput.value.trim();
+        const enteredUsername = usernameInput.value.trim().toLowerCase();
         if (enteredUsername) {
             username = enteredUsername;
-            localStorage.setItem("wordle_username", username);
+            localStorage.setItem("wordle_username", username.toLowerCase());
             checkIfPlayedToday();
         }
     });
 
     async function checkIfPlayedToday() {
         const today = new Date().toISOString().split('T')[0];
-        const lastPlayDate = localStorage.getItem(`wordle_last_play_${username}`);
+        const lastPlayDate = localStorage.getItem(`wordle_last_play_${username.toLowerCase()}`);
 
         if (lastPlayDate === today) {
             alert("You have already played today. Come back tomorrow!");
@@ -159,12 +159,12 @@ document.addEventListener("DOMContentLoaded", () => {
 			const score = Math.round(1000 * Math.log10(1 + raw * 1e6));
             saveScore(score, timeTaken, steps);
             setTimeout(() => alert(`Kazandınız! Puanınız: ${score.toFixed(0)}`), 100);
-            localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
+            localStorage.setItem(`wordle_last_play_${username.toLowerCase()}`, new Date().toISOString().split('T')[0]);
         } else if (currentRow === 5) {
             isGameOver = true;
             saveScore(0, timeTaken, 6);
             setTimeout(() => alert(`Kaybettiniz! Doğru kelime: ${solution}`), 100);
-            localStorage.setItem(`wordle_last_play_${username}`, new Date().toISOString().split('T')[0]);
+            localStorage.setItem(`wordle_last_play_${username.toLowerCase()}`, new Date().toISOString().split('T')[0]);
         }
     }
 
@@ -189,13 +189,13 @@ document.addEventListener("DOMContentLoaded", () => {
     function saveScore(score, time, steps) {
         const today = new Date().toISOString().split('T')[0];
         const month = new Date().toISOString().slice(0, 7);
-        db.collection("dailyScores").add({ username, score, date: today, time, steps });
+        db.collection("dailyScores").add({ username.toLowerCase(), score, date: today, time, steps });
 
         const userMonthlyDocRef = db.collection("monthlyScores").doc(`${username}_${month}`);
         db.runTransaction((transaction) => {
             return transaction.get(userMonthlyDocRef).then((doc) => {
                 if (!doc.exists) {
-                    transaction.set(userMonthlyDocRef, { username, month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
+                    transaction.set(userMonthlyDocRef, { username.toLowerCase(), month, totalScore: score, playCount: 1, totalTime: time, totalSteps: steps });
                 } else {
                     const newTotalScore = doc.data().totalScore + score;
                     const newPlayCount = doc.data().playCount + 1;
@@ -256,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
             qs.forEach(doc => data.push(doc.data()));
             data.sort((a, b) => b.score - a.score);
             const rows = data.slice(0, 10).map(d => [
-                d.username,
+                d.username.toLowerCase(),
                 d.score.toFixed(0),
                 d.time.toFixed(1) + "s",
                 d.steps
@@ -275,7 +275,7 @@ document.addEventListener("DOMContentLoaded", () => {
             // SUM Leaderboard
             data.sort((a, b) => b.totalScore - a.totalScore);
             const sumRows = data.slice(0, 10).map(d => [
-                d.username,
+                d.username.toLowerCase(),
                 d.totalScore.toFixed(0),
                 (d.totalTime || 0).toFixed(1) + "s",
                 d.totalSteps || 0
@@ -288,7 +288,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const avgScore = d.totalScore / d.playCount;
                 const avgTime = d.totalTime / d.playCount;
                 const avgSteps = d.totalSteps / d.playCount;
-                return [d.username, avgScore.toFixed(0), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
+                return [d.username.toLowerCase(), avgScore.toFixed(0), avgTime.toFixed(1) + "s", avgSteps.toFixed(1)];
             });
             monthlyMeanEl.appendChild(buildTable(["#", "Username", "Avg Score", "Avg Time", "Avg Steps"], meanRows));
         });
@@ -381,7 +381,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Restore username
     const storedUsername = localStorage.getItem("wordle_username");
     if (storedUsername) {
-        usernameInput.value = storedUsername;
-        username = storedUsername;
+        usernameInput.value.toLowerCase() = storedUsername.toLowerCase();
+        username = storedUsername.toLowerCase();
     }
 });
+
